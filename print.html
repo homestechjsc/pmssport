@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>In Hóa Đơn</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Courier+Prime:wght@400;700&display=swap');
+        body { font-family: 'Courier Prime', monospace; width: 80mm; margin: 0; padding: 5mm; }
+        @media print { 
+            body { padding: 0; margin: 0; width: 80mm; }
+            .no-print { display: none; } 
+        }
+    </style>
+</head>
+<body class="text-slate-800">
+    <div class="no-print mb-4 flex gap-2">
+        <button onclick="window.print()" class="bg-blue-600 text-white px-4 py-2 rounded text-xs font-bold uppercase">
+            <i class="fa-solid fa-print"></i> In ngay
+        </button>
+        <button onclick="window.close()" class="bg-slate-200 text-slate-600 px-4 py-2 rounded text-xs font-bold uppercase">Đóng</button>
+    </div>
+
+    <div id="bill-area">
+        <div class="text-center mb-4 border-b border-dashed border-slate-300 pb-4">
+            <h2 id="print-sys-name" class="font-bold text-lg uppercase">PICKLEBALL POS</h2>
+            <p id="print-sys-address" class="text-[10px]">Đang tải địa chỉ...</p>
+            <p id="print-sys-phone" class="text-[10px] font-bold italic"></p>
+        </div>
+
+        <div class="text-[11px] mb-4 space-y-1">
+            <div class="flex justify-between"><span>Số HD:</span> <span id="print-bill-id" class="font-bold">#000000</span></div>
+            <div class="flex justify-between"><span>Ngày in:</span> <span id="print-date">19/03/2026</span></div>
+            <div class="flex justify-between"><span>Khách hàng:</span> <span id="print-customer" class="font-bold uppercase">Khách lẻ</span></div>
+        </div>
+
+        <table class="w-full text-[11px] mb-4 border-t border-b border-dashed border-slate-300 py-2">
+            <thead>
+                <tr class="text-left font-bold italic">
+                    <th class="py-1">Món</th>
+                    <th class="text-center">SL</th>
+                    <th class="text-right">T.Tiền</th>
+                </tr>
+            </thead>
+            <tbody id="print-items-body">
+                </tbody>
+        </table>
+
+        <div class="space-y-1 mb-6">
+            <div class="flex justify-between font-bold text-sm">
+                <span>TỔNG CỘNG:</span>
+                <span id="print-total" class="text-base font-black">0đ</span>
+            </div>
+        </div>
+
+        <div class="text-center text-[10px] italic">
+            <p id="print-sys-footer">Cảm ơn & Hẹn gặp lại!</p>
+            <div class="mt-4 pt-4 border-t border-dashed border-slate-200 flex flex-col items-center">
+                <img id="print-qr" src="" class="w-32 h-32 hidden">
+                <p class="text-[8px] uppercase mt-2 text-slate-400">Quét để thanh toán</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Lắng nghe dữ liệu từ cửa sổ index.html gửi tới
+        window.addEventListener('message', (event) => {
+            const { bill, sys } = event.data;
+            if (!bill) return;
+
+            // 1. Đổ thông tin hệ thống
+            document.getElementById('print-sys-name').innerText = sys.name || "PICKLEBALL PRO";
+            document.getElementById('print-sys-address').innerText = sys.address || "";
+            document.getElementById('print-sys-phone').innerText = "SĐT: " + (sys.phone || "");
+            document.getElementById('print-sys-footer').innerText = sys.footer || "Cảm ơn quý khách!";
+
+            // 2. Đổ thông tin hóa đơn
+            document.getElementById('print-bill-id').innerText = "#" + (bill.Id || "000000");
+            document.getElementById('print-customer').innerText = bill.Customer || "Khách lẻ";
+            document.getElementById('print-date').innerText = bill.Date || new Date().toLocaleString('vi-VN');
+            document.getElementById('print-total').innerText = Number(bill.Total || 0).toLocaleString() + "đ";
+
+            // 3. Vẽ danh sách món
+            let itemsHtml = '';
+            const items = bill.Items || [];
+            items.forEach(item => {
+                itemsHtml += `
+                    <tr>
+                        <td class="py-1 uppercase text-[10px]">${item.name || item.Ten || 'Món'}</td>
+                        <td class="text-center">${item.qty || item.SL || 1}</td>
+                        <td class="text-right font-bold">${Number(item.price || item.Gia || 0).toLocaleString()}đ</td>
+                    </tr>`;
+            });
+            document.getElementById('print-items-body').innerHTML = itemsHtml;
+
+            // 4. Cập nhật QR (nếu có bank)
+            if (sys.bankId && sys.bankNo) {
+                const qrImg = document.getElementById('print-qr');
+                qrImg.src = `https://img.vietqr.io/image/${sys.bankId}-${sys.bankNo}-compact.png?amount=${bill.Total}&addTag=0`;
+                qrImg.classList.remove('hidden');
+            }
+        });
+    </script>
+</body>
+</html>

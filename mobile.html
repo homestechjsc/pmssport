@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>PMS - Quản Lý Mobile</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
+        body { font-family: 'Inter', sans-serif; background: #f1f5f9; -webkit-tap-highlight-color: transparent; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; animation: fadeIn 0.2s ease; }
+        .nav-item.active { color: #2563eb; }
+        .pulse-red { animation: pulse 2s infinite; }
+        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        
+        #modal-mobile-booking, #modal-report-detail { transition: opacity 0.3s ease; }
+        #booking-sheet, #report-sheet { transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+
+        .report-menu-card {
+            background: white;
+            padding: 20px;
+            border-radius: 24px;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            border: 1px solid #f1f5f9;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+            transition: all 0.2;
+        }
+        .report-menu-card:active { transform: scale(0.97); background: #f8fafc; }
+    </style>
+</head>
+<body class="pb-24">
+
+    <header class="bg-white p-4 flex justify-between items-center sticky top-0 z-50 shadow-sm">
+        <div class="flex items-center">
+            <img src="https://cameradalat.com/wp-content/uploads/2026/02/PmsSport-Logo-scaled.png" 
+                 alt="PMS Sport Logo" 
+                 class="h-10 w-auto object-contain" />
+        </div>
+        
+        <button onclick="auth.logout()" class="w-10 h-10 flex items-center justify-center text-rose-500 bg-rose-50 rounded-full active:scale-95 transition-all">
+            <i class="fa-solid fa-power-off"></i>
+        </button>
+    </header>
+
+    <main class="p-4">
+        <div id="tab-home" class="tab-content active space-y-4">
+            <div class="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm text-center">
+                <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Doanh thu hôm nay</p>
+                <p id="stat-revenue" class="text-3xl font-[900] text-blue-600">0đ</p>
+            </div>
+            <div class="bg-white p-5 rounded-[2rem] border border-slate-100 shadow-sm">
+                <div class="flex justify-between items-center mb-4 text-slate-500">
+                    <h3 class="text-[10px] font-black uppercase tracking-widest">Lưu lượng doanh thu (6h - 22h)</h3>
+                    <i class="fa-solid fa-chart-simple text-blue-500 text-xs"></i>
+                </div>
+                <div id="peak-hour-chart-mobile" class="flex items-end gap-1 h-24 border-b border-slate-50 pb-1"></div>
+            </div>
+            <h2 class="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mt-8 mb-2 ml-2 italic">● Sân đang hoạt động</h2>
+            <div id="grid-courts-mobile" class="space-y-3">
+                <div class="py-10 text-center opacity-20 italic">Đang nạp dữ liệu...</div>
+            </div>
+        </div>
+
+        <div id="tab-calendar" class="tab-content space-y-4">
+            <div class="flex justify-between items-center mb-2 px-1">
+                <h2 class="font-black text-lg uppercase text-slate-500 tracking-tighter"> </h2>
+                <input type="date" id="view-date-mobile" onchange="appMobile.renderCalendar()" 
+                       class="bg-white border-none rounded-xl px-3 py-2 text-[10px] font-black uppercase shadow-sm outline-none">
+            </div>
+            <div id="list-calendar-mobile" class="space-y-3"></div>
+        </div>
+
+        <div id="tab-report-menu" class="tab-content space-y-4">
+            <h2 class="font-black text-lg uppercase italic mb-6 ml-2 text-slate-800 tracking-tighter"> </h2>
+            <div class="grid grid-cols-1 gap-4">
+                <div onclick="appMobile.viewReportDetail('daily')" class="report-menu-card">
+                    <div class="w-12 h-12 bg-amber-100 text-amber-600 rounded-2xl flex items-center justify-center text-xl">
+                        <i class="fa-solid fa-calendar-check"></i>
+                    </div>
+                    <div>
+                        <p class="font-black text-slate-800 uppercase text-sm">Báo cáo cuối ngày</p>
+                        <p class="text-[10px] text-slate-400 font-bold uppercase">Tổng kết doanh thu & đơn hàng</p>
+                    </div>
+                </div>
+                <div onclick="appMobile.viewReportDetail('sales')" class="report-menu-card">
+                    <div class="w-12 h-12 bg-blue-100 text-blue-600 rounded-2xl flex items-center justify-center text-xl">
+                        <i class="fa-solid fa-cart-shopping"></i>
+                    </div>
+                    <div>
+                        <p class="font-black text-slate-800 uppercase text-sm">Báo cáo bán hàng</p>
+                        <p class="text-[10px] text-slate-400 font-bold uppercase">Chi tiết dịch vụ & sản phẩm</p>
+                    </div>
+                </div>
+                <div onclick="appMobile.viewReportDetail('inventory')" class="report-menu-card">
+                    <div class="w-12 h-12 bg-emerald-100 text-emerald-600 rounded-2xl flex items-center justify-center text-xl">
+                        <i class="fa-solid fa-boxes-stacked"></i>
+                    </div>
+                    <div>
+                        <p class="font-black text-slate-800 uppercase text-sm">Báo cáo nhập kho</p>
+                        <p class="text-[10px] text-slate-400 font-bold uppercase">Quản lý kho bãi & hàng hóa</p>
+                    </div>
+                </div>
+                <div onclick="appMobile.viewReportDetail('cash')" class="report-menu-card">
+                    <div class="w-12 h-12 bg-rose-100 text-rose-600 rounded-2xl flex items-center justify-center text-xl">
+                        <i class="fa-solid fa-money-bill-transfer"></i>
+                    </div>
+                    <div>
+                        <p class="font-black text-slate-800 uppercase text-sm">Báo cáo sổ quỹ</p>
+                        <p class="text-[10px] text-slate-400 font-bold uppercase">Dòng tiền & Lợi nhuận</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <div id="fab-booking" class="fixed bottom-24 right-6 z-40 hidden">
+        <button onclick="appMobile.openBookingModal()" 
+                class="w-14 h-14 bg-blue-600 text-white rounded-full shadow-2xl flex items-center justify-center text-2xl active:scale-90 transition-all border-4 border-white">
+            <i class="fa-solid fa-plus"></i>
+        </button>
+    </div>
+
+    <nav class="fixed bottom-0 inset-x-0 bg-white/90 backdrop-blur-md border-t h-20 flex justify-around items-center px-6 z-50">
+        <button onclick="switchTab('home')" id="btn-home" class="nav-item active flex flex-col items-center gap-1">
+            <i class="fa-solid fa-house-chimney text-xl"></i>
+            <span class="text-[9px] font-black uppercase tracking-tighter">Trang chủ</span>
+        </button>
+        <button onclick="switchTab('calendar')" id="btn-calendar" class="nav-item flex flex-col items-center gap-1">
+            <i class="fa-solid fa-calendar-days text-xl"></i>
+            <span class="text-[9px] font-black uppercase tracking-tighter">Lịch đặt</span>
+        </button>
+        <button onclick="switchTab('report-menu')" id="btn-report-menu" class="nav-item flex flex-col items-center gap-1">
+            <i class="fa-solid fa-chart-pie text-xl"></i>
+            <span class="text-[9px] font-black uppercase tracking-tighter">Báo cáo</span>
+        </button>
+    </nav>
+
+    <div id="modal-report-detail" class="fixed inset-0 bg-black/60 z-[1000] hidden flex items-end">
+        <div id="report-sheet" class="bg-slate-50 w-full rounded-t-[2.5rem] p-6 shadow-2xl transform translate-y-full flex flex-col max-h-[90vh]">
+            <div class="w-12 h-1.5 bg-slate-200 rounded-full mx-auto mb-6 flex-shrink-0"></div>
+            <div class="flex justify-between items-center mb-6 flex-shrink-0 px-1">
+                <h2 id="report-popup-title" class="font-[900] text-xl uppercase italic text-slate-800 tracking-tighter"></h2>
+                <button onclick="appMobile.closeReportModal()" class="w-8 h-8 flex items-center justify-center bg-white rounded-full text-slate-400 shadow-sm">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            <div id="report-popup-body" class="overflow-y-auto no-scrollbar pb-10"></div>
+        </div>
+    </div>
+
+    <div id="modal-mobile-booking" class="fixed inset-0 bg-black/60 z-[1000] hidden flex items-end">
+        <div id="booking-sheet" class="bg-white w-full rounded-t-[2.5rem] p-6 shadow-2xl transform translate-y-full overflow-hidden">
+            <div class="w-12 h-1.5 bg-slate-200 rounded-full mx-auto mb-6"></div>
+            <h2 class="font-[900] text-xl uppercase italic mb-6 text-slate-800 flex items-center gap-2">
+                <i class="fa-solid fa-calendar-plus text-blue-600"></i> Đặt lịch mới
+            </h2>
+            <div class="space-y-4 max-h-[65vh] overflow-y-auto no-scrollbar pb-6 px-1">
+                <div class="grid grid-cols-2 gap-3">
+                    <div class="bg-slate-50 p-3 rounded-2xl border border-slate-100">
+                        <label class="text-[9px] font-black uppercase text-slate-400 block mb-1">Ngày chơi</label>
+                        <input type="date" id="mb-date" class="w-full bg-transparent font-bold text-sm outline-none">
+                    </div>
+                    <div class="bg-slate-50 p-3 rounded-2xl border border-slate-100">
+                        <label class="text-[9px] font-black uppercase text-slate-400 block mb-1">Chọn Sân</label>
+                        <select id="mb-court-id" class="w-full bg-transparent font-bold text-sm outline-none appearance-none"></select>
+                    </div>
+                </div>
+                <div class="bg-slate-50 p-4 rounded-2xl border border-slate-100">
+                    <label class="text-[9px] font-black uppercase text-slate-400 block mb-1">Tên khách hàng</label>
+                    <input type="text" id="mb-name" placeholder="Nhập tên khách..." class="w-full bg-transparent font-black text-blue-600 outline-none">
+                </div>
+                <div class="bg-slate-50 p-4 rounded-2xl border border-slate-100">
+                    <label class="text-[9px] font-black uppercase text-slate-400 block mb-1">Số điện thoại</label>
+                    <input type="tel" id="mb-phone" placeholder="09xxxxxxxx" class="w-full bg-transparent font-bold outline-none">
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div class="bg-blue-50 p-3 rounded-2xl border border-blue-100">
+                        <label class="text-[9px] font-black text-blue-400 block mb-1 uppercase">Giờ vào</label>
+                        <input type="time" id="mb-start" class="w-full bg-transparent font-black text-blue-700 outline-none text-lg">
+                    </div>
+                    <div class="bg-rose-50 p-3 rounded-2xl border border-rose-100">
+                        <label class="text-[9px] font-black text-rose-400 block mb-1 uppercase">Giờ ra</label>
+                        <input type="time" id="mb-end" class="w-full bg-transparent font-black text-rose-700 outline-none text-lg">
+                    </div>
+                </div>
+                <div class="bg-emerald-50 p-4 rounded-2xl border border-emerald-100">
+                    <label class="text-[9px] font-black text-emerald-500 block mb-1 uppercase italic">Tiền đặt cọc (đ)</label>
+                    <input type="number" id="mb-deposit" placeholder="0" class="w-full bg-transparent font-black text-emerald-700 outline-none text-lg">
+                </div>
+            </div>
+            <div class="grid grid-cols-2 gap-3 pt-2">
+                <button onclick="appMobile.closeBookingModal()" class="py-4 bg-slate-100 text-slate-400 rounded-2xl font-black uppercase text-[10px]">Hủy bỏ</button>
+                <button onclick="appMobile.saveBooking()" class="py-4 bg-blue-600 text-white rounded-2xl font-black uppercase text-[10px] shadow-lg shadow-blue-100 active:scale-95 transition-all">Xác nhận đặt</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        window.switchTab = function(id) {
+            document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+            
+            document.getElementById('tab-' + id).classList.add('active');
+            document.getElementById('btn-' + id).classList.add('active');
+
+            const fab = document.getElementById('fab-booking');
+            if (fab) {
+                if (id === 'calendar') fab.classList.remove('hidden');
+                else fab.classList.add('hidden');
+            }
+            
+            if(id === 'calendar' && window.appMobile) appMobile.renderCalendar();
+        };
+
+        window.auth = {
+            logout: () => {
+                if(confirm("🔔 Bạn có chắc chắn muốn đăng xuất không?")) {
+                    sessionStorage.removeItem('pms_user');
+                    location.reload();
+                }
+            }
+        };
+        window.dataCache = {};
+    </script>
+    <script type="module" src="js/firebase-config.js"></script>
+    <script src="js/app-mobile.js"></script>
+</body>
+</html>

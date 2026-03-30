@@ -1,0 +1,2448 @@
+<!DOCTYPE html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PMS PRO - FULL SYSTEM UPDATED</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.sheetjs.com/xlsx-0.19.3/package/dist/xlsx.full.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
+        body { font-family: 'Inter', sans-serif; background: #f8fafc; color: #1e293b; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; animation: fadeIn 0.2s ease; }
+        .nav-btn.active { color: #2563eb; border-bottom: 3px solid #2563eb; font-weight: 900; }
+        .modal {
+    display: none; /* Mặc định ẩn */
+    position: fixed;
+    inset: 0;
+    z-index: 9999; /* Phải cực cao để đè lên Timeline */
+    background: rgba(0, 0, 0, 0.6);
+    align-items: center;
+    justify-content: center;
+}
+
+/* Class active phải ép display: flex */
+.modal.active {
+    display: flex !important;
+}
+        .card-shadow { box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05); }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+        .timeline-slot { position: absolute; height: 32px; top: 4px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.3); cursor: pointer; transition: all 0.2s; border-left-width: 4px; }
+        .timeline-grid { background-image: linear-gradient(to right, #e2e8f0 1px, transparent 1px); background-size: calc(100% / 16) 100%; }
+        .status-maintenance { background-color: #f1f5f9 !important; border-color: #cbd5e1 !important; opacity: 0.7; }
+        .pay-method-btn.selected { border-color: #10b981; background-color: #ecfdf5; color: #065f46; }
+        #login-screen { position: fixed; inset: 0; background: #0f172a; z-index: 9999; display: flex; align-items: center; justify-content: center; }
+        .hidden { display: none !important; }
+        /* Thêm vào cuối thẻ <style> */
+
+ /* Ép hiển thị cả 2 menu khi hover vào vùng group */
+.group:hover #dropdown-manage,
+.group:hover #dropdown-user {
+    display: block !important;
+}
+
+/* Tạo "cầu nối" vô hình 20px để giữ chuột không bị rời vùng hover */
+#dropdown-manage::before,
+#dropdown-user::before {
+    content: "";
+    position: absolute;
+    top: -20px;
+    left: 0;
+    right: 0;
+    height: 20px;
+    background: transparent;
+}
+
+/* Đồng bộ style các mục menu */
+.menu-item-pro {
+    display: flex !important;
+    align-items: center !important;
+    gap: 12px;
+    padding: 10px 14px;
+    border-radius: 12px;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    color: #475569;
+}
+
+.menu-item-pro:hover {
+    background-color: #f1f5f9;
+    color: #2563eb !important;
+    transform: translateX(4px);
+}
+
+.menu-item-pro i {
+    width: 20px;
+    text-align: center;
+    font-size: 14px;
+}
+
+.menu-item-pro span {
+    font-size: 11px;
+    font-weight: 800;
+    text-transform: uppercase;
+}           
+   /* Khi rê chuột vào vùng 'group', ép hiển thị menu */
+.group:hover #dropdown-manage {
+    display: block !important;
+}
+
+/* Tạo vùng đệm an toàn để chuột di chuyển mượt mà từ nút xuống menu */
+#dropdown-manage::before {
+    content: "";
+    position: absolute;
+    top: -20px;
+    left: 0;
+    right: 0;
+    height: 20px;
+    background: transparent;
+}         
+/* Style cho các mục trong menu quản lý */
+.menu-item-pro {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 14px;
+    border-radius: 12px;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    color: #475569;
+    text-decoration: none !important;
+}
+
+.menu-item-pro:hover {
+    background-color: #f1f5f9;
+    color: #2563eb;
+    transform: translateX(4px); /* Hiệu ứng nhích nhẹ sang phải khi hover */
+}
+
+.menu-item-pro i {
+    width: 20px; /* Cố định độ rộng icon để chữ luôn thẳng hàng */
+    text-align: center;
+    font-size: 14px;
+}
+
+.menu-item-pro span {
+    font-size: 11px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: -0.01em;
+}
+            
+    /* Đảm bảo menu dropdown luôn nổi lên trên mọi thứ */
+#dropdown-manage, #dropdown-user {
+    display: none; /* Mặc định ẩn */
+    position: absolute;
+    z-index: 9999 !important; /* Ưu tiên cao nhất */
+}
+
+/* Khi bỏ class hidden thì ép hiển thị block */
+#dropdown-manage:not(.hidden), #dropdown-user:not(.hidden) {
+    display: block !important;
+}
+
+/* Hiệu ứng hiện ra */
+.animate-fadeIn {
+    animation: fadeIn 0.2s ease-out;
+}
+
+#service-dropdown-list {
+    max-height: 250px;
+    overflow-y: auto;
+    z-index: 1000;
+    scrollbar-width: thin;
+}
+#service-dropdown-list div:hover {
+    background-color: #f1f5f9;
+}
+/* Tùy chỉnh thanh cuộn cho vùng giỏ hàng */
+#pos-cart-items::-webkit-scrollbar {
+    width: 4px; /* Độ rộng siêu mảnh */
+}
+
+#pos-cart-items::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.05); /* Nền rãnh trượt mờ */
+    border-radius: 10px;
+}
+
+#pos-cart-items::-webkit-scrollbar-thumb {
+    background: rgba(59, 130, 246, 0.5); /* Màu xanh mờ cho thanh trượt */
+    border-radius: 10px;
+}
+
+#pos-cart-items::-webkit-scrollbar-thumb:hover {
+    background: #3b82f6; /* Hiện rõ màu xanh khi di chuột vào */
+}
+
+/* Hiệu ứng ẩn hiện thanh cuộn tự động */
+#pos-cart-items {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(59, 130, 246, 0.5) transparent;
+    transition: all 0.3s;
+}
+/* Sửa trong thẻ <style> */
+#pos-cart-render::-webkit-scrollbar {
+    width: 4px;
+}
+#pos-cart-render::-webkit-scrollbar-thumb {
+    background: rgba(59, 130, 246, 0.5);
+    border-radius: 10px;
+}
+
+/* Card cơ bản với bo góc và chuyển cảnh mượt */
+.sport-card-rect {
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    border: 1px solid #e5e7eb;
+    border-radius: 16px;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Hiệu ứng Hover chuyên nghiệp */
+.sport-card-rect:hover {
+    transform: translateY(-5px) !important;
+    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.12) !important;
+    border-color: rgba(59, 130, 246, 0.5);
+}
+
+/* Phân biệt trạng thái bằng màu viền Top và màu nền nhẹ */
+.card-busy { border-top: 5px solid #ef4444 !important; background: #fff8f8; } /* Đang chơi - Đỏ */
+.card-ready { border-top: 5px solid #3b82f6 !important; background: #f0f7ff; } /* Sẵn sàng - Xanh */
+.card-maint { border-top: 5px solid #94a3b8 !important; background: #f8fafc; opacity: 0.7; filter: grayscale(0.6); } /* Bảo trì - Xám */
+
+/* Chấm đỏ nhấp nháy cho sân đang chơi */
+.status-dot-active {
+    background-color: #ef4444;
+    box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7);
+    animation: pulse-active 2s infinite;
+}
+
+@keyframes pulse-active {
+    0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
+    70% { transform: scale(1); box-shadow: 0 0 0 6px rgba(239, 68, 68, 0); }
+    100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+}
+
+/* tối ưu menu
+/* Tối ưu Nav Button */
+.nav-btn {
+    position: relative;
+    letter-spacing: 0.05em;
+}
+
+.nav-btn.active {
+    color: #2563eb !important;
+    border-bottom: 2px solid #2563eb !important;
+    background: rgba(37, 99, 235, 0.03);
+}
+
+.nav-btn:hover:not(.active) {
+    color: #1e293b;
+    background: #f8fafc;
+}
+
+/* Animation cho Dropdown */
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+.animate-fadeIn {
+    animation: fadeIn 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Ẩn thanh cuộn nếu menu quá dài trên mobile */
+nav .overflow-x-auto::-webkit-scrollbar {
+    display: none;
+}
+
+/* CSS hỗ trợ hiển thị Icon Hội viên góc trên phải */
+#list-members-table td .relative {
+    position: relative;
+    display: inline-block;
+    padding-right: 1.25rem; /* pr-5 của Tailwind */
+}
+
+#list-members-table td .absolute {
+    position: absolute;
+    top: -0.25rem; /* -top-1 */
+    right: -0.25rem; /* -right-1 */
+    font-size: 10px; /* text-[10px] */
+    color: #D4AF37 !important; /* Màu Vàng Đồng (Gold) chuẩn */
+    transform: rotate(15deg); /* Xoay nhẹ cho đẹp */
+    filter: drop-shadow(0 1px 1px rgba(0,0,0,0.1));
+}
+/* Modal mặc định (như Booking, Checkin) */
+.modal {
+    display: none; 
+    position: fixed;
+    inset: 0;
+    z-index: 2000 !important; /* Mức 2000 cho modal-booking, modal-checkin... */
+    background: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(4px);
+    align-items: center;
+    justify-content: center;
+}
+/* ÉP MODAL THÊM KHÁCH (VÀ CÁC MODAL PHỤ) LÊN TẦNG CAO NHẤT */
+#modal-quick-add-cust, 
+#modal-court-type,
+#modal-category-manager,
+#modal-service-cat {
+    z-index: 9999 !important; /* Mức 9999 để đảm bảo luôn nằm trên cùng của mọi thứ */
+}
+/* Đảm bảo phần nội dung trắng của modal khách hàng cũng có z-index cao */
+#modal-quick-add-cust > div {
+    position: relative;
+    z-index: 10000 !important;
+}
+/* Màu cho khách Hội viên trên Timeline */
+.bg-member-booking {
+    background-color: #f97316 !important; /* Orange-500 */
+    border-left: 4px solid #ea580c !important; /* Orange-600 để tạo điểm nhấn */
+    color: white !important;
+}
+
+/* Màu cho khách Vãng lai (giữ nguyên hoặc chỉnh lại cho dịu) */
+.bg-guest-booking {
+    background-color: #3b82f6 !important; /* Blue-500 */
+    border-left: 4px solid #2563eb !important;
+    color: white !important;
+}
+
+/* Làm đẹp thanh cuộn cho danh sách món */
+.custom-scrollbar::-webkit-scrollbar {
+    width: 4px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 10px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 10px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: #94a3b8;
+}
+
+/* Hiệu ứng khi focus vào ô tìm kiếm */
+#service-search-input:focus {
+    box-shadow: 0 10px 15px -3px rgba(59, 130, 246, 0.1);
+}
+
+
+    </style>
+</head>
+
+<body>
+   
+    <div id="login-screen">
+        <div class="bg-white p-8 rounded-[2.5rem] shadow-2xl w-full max-sm:max-w-xs max-w-sm">
+            <div class="text-center mb-8">
+    <div class="mb-4">
+        <img src="https://cameradalat.com/wp-content/uploads/2026/02/PmsSport-Logo-scaled.png" 
+             alt="PMS Sport Logo" 
+             class="h-16 w-auto mx-auto object-contain drop-shadow-md" />
+    </div>
+    <p class="text-[10px] font-black uppercase text-slate-400 tracking-[0.2em] mt-1">Đăng nhập để bắt đầu</p>
+</div>
+            <div class="space-y-4">
+                <input type="text" id="login-user" placeholder="Tên đăng nhập" class="w-full bg-slate-100 rounded-2xl p-4 font-bold outline-none border-2 border-transparent focus:border-blue-500">
+                <input type="password" id="login-pass" placeholder="Mật khẩu" class="w-full bg-slate-100 rounded-2xl p-4 font-bold outline-none border-2 border-transparent focus:border-blue-500">
+                <button onclick="auth.login()" class="w-full bg-blue-600 text-white py-4 rounded-2xl font-black uppercase shadow-lg">Đăng nhập</button>
+            </div>
+            <p class="text-center text-[10px] text-slate-400 mt-4">HOTLINE: 0906.255.788</p>
+        </div>
+    </div>
+
+    <nav class="bg-white border-b sticky top-0 z-50 shadow-sm">
+    <div class="max-w-[1400px] mx-auto px-4 flex justify-between items-center">
+        
+        <div class="flex items-center gap-8">
+            <a href="javascript:void(0)" onclick="ui.switchTab('op')" class="py-2 flex items-center group cursor-pointer">
+    <img src="https://cameradalat.com/wp-content/uploads/2026/02/PmsSport-Logo-scaled.png" 
+         alt="PMS Sport Logo" 
+         class="h-10 w-auto object-contain transition-transform group-hover:scale-105" />
+        </a>
+            <div class="lg:flex items-center thungan-only">
+                <button onclick="ui.switchTab('op')" id="btn-op" class="nav-btn active flex items-center gap-2 px-4 py-6 text-[11px] font-black uppercase tracking-wider text-slate-500 transition-all border-b-2 border-transparent">
+                    <i class="fa-solid fa-calendar-check opacity-50"></i> Vận hành
+                </button>
+                <button onclick="ui.switchTab('pos')" id="btn-pos" class="nav-btn flex items-center gap-2 px-4 py-6 text-[11px] font-black uppercase tracking-wider text-slate-500 transition-all border-b-2 border-transparent">
+                    <i class="fa-solid fa-cart-shopping opacity-50"></i> Bán lẻ (POS)
+                </button>
+                <button onclick="ui.switchTab('bill')" id="btn-bill" class="nav-btn flex items-center gap-2 px-4 py-6 text-[11px] font-black uppercase tracking-wider text-slate-500 transition-all border-b-2 border-transparent">
+                    <i class="fa-solid fa-file-invoice-dollar opacity-50"></i> Hóa đơn
+                </button>
+                <button onclick="ui.switchTab('all-customers')" id="btn-all-customers" class="nav-btn flex items-center gap-2 px-4 py-6 text-[11px] font-black uppercase tracking-wider text-slate-500 transition-all border-b-2 border-transparent"> 
+                    <i class="fa-solid fa-address-book opacity-50"></i> Danh bạ khách
+                </button>
+                <button onclick="ui.switchTab('member')" id="btn-member" class="nav-btn flex items-center gap-2 px-4 py-6 text-[11px] font-black uppercase tracking-wider text-slate-500 transition-all border-b-2 border-transparent">
+                    <i class="fa-solid fa-users opacity-50"></i> Hội viên
+                </button>
+            </div>
+
+                <div class="relative inline-block ml-2">
+    <button onclick="document.getElementById('modal-booking-online').classList.remove('hidden')" 
+            class="flex items-center gap-2 px-3 py-2 bg-amber-50 text-amber-600 rounded-xl border border-amber-100 hover:bg-amber-500 hover:text-white transition-all font-black text-[10px] uppercase shadow-sm">
+        <i class="fa-solid fa-earth-asia"></i>
+        <span>Web Booking</span>
+        
+        <span id="booking-online-badge" 
+              class="hidden absolute -top-1.5 -right-1.5 bg-red-600 text-white text-[9px] w-5 h-5 flex items-center justify-center rounded-full font-black border-2 border-white shadow-lg animate-pulse">
+            0
+        </span>
+    </button>
+</div>
+
+<div id="modal-booking-online" class="fixed inset-0 bg-black/40 z-[9999] hidden flex items-center justify-center backdrop-blur-sm p-4">
+    <div class="bg-white w-full max-w-sm rounded-[2rem] shadow-2xl overflow-hidden animate-in slide-in-from-bottom duration-300">
+        <div class="p-6 border-b bg-slate-50/50 flex justify-between items-center">
+            <h3 class="font-black text-slate-800 uppercase italic text-sm tracking-tighter">Đơn đặt từ Website</h3>
+            <button onclick="document.getElementById('modal-booking-online').classList.add('hidden')" class="text-slate-400 hover:text-red-500 transition-colors">
+                <i class="fa-solid fa-circle-xmark text-xl"></i>
+            </button>
+        </div>
+        <div id="booking-online-list" class="max-h-[400px] overflow-y-auto"></div>
+    </div>
+</div>
+
+        </div> <div class="flex items-center gap-2">
+            <button onclick="ui.switchTab('reports')" class="hidden md:flex items-center gap-2 px-3 py-2 bg-amber-50 text-amber-600 rounded-xl border border-amber-100 hover:bg-amber-100 transition-all font-black text-[10px] uppercase admin-only quanly-only">
+                <i class="fa-solid fa-chart-pie"></i> Báo cáo
+            </button>
+
+            <div class="relative inline-block text-left admin-only quanly-only">
+                <button onclick="ui.toggleDropdown(event, 'dropdown-manage')" class="flex items-center gap-2 px-3 py-2 text-slate-600 hover:bg-slate-50 rounded-xl transition-all font-[900] text-[10px] uppercase">
+                    <i class="fa-solid fa-layer-group opacity-50"></i> 
+                    <span>Quản lý</span> 
+                    <i class="fa-solid fa-chevron-down text-[8px] opacity-40 ml-1"></i>
+                </button>
+
+                <div id="dropdown-manage" class="hidden absolute right-0 w-60 bg-white rounded-2xl shadow-2xl border border-slate-100 py-2 mt-2 z-[1000] animate-fadeIn">
+                    <div class="flex flex-col gap-0.5 px-2">
+                        <a href="javascript:void(0)" onclick="ui.switchTab('court')" class="menu-item-pro">
+                            <i class="fa-solid fa-table-tennis-paddle-ball text-blue-500"></i>
+                            <span>Cài đặt Sân</span>
+                        </a>
+                        <a href="javascript:void(0)" onclick="ui.switchTab('service')" class="menu-item-pro">
+                            <i class="fa-solid fa-box-open text-emerald-500"></i>
+                            <span>Danh mục dịch vụ</span>
+                        </a>
+                        <a href="javascript:void(0)" onclick="ui.switchTab('suppliers')" class="menu-item-pro">
+                            <i class="fa-solid fa-truck text-indigo-500"></i>
+                            <span>Nhà cung cấp</span>
+                        </a>
+                        <a href="javascript:void(0)" onclick="ui.switchTab('stock')" class="menu-item-pro">
+                            <i class="fa-solid fa-warehouse text-orange-500"></i>
+                            <span>Nhập kho hàng</span>
+                        </a>
+                        <a href="javascript:void(0)" onclick="ui.switchTab('ledger')" class="menu-item-pro">
+                            <i class="fa-solid fa-vault text-rose-500"></i>
+                            <span>Sổ quỹ</span>
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <div class="h-6 w-[1px] bg-slate-200 mx-2"></div>
+
+            <div class="relative inline-block text-left group thungan-only">
+                <button onclick="ui.toggleDropdown(event, 'dropdown-user')" class="flex items-center gap-2 p-1.5 hover:bg-slate-100 rounded-2xl transition-all border border-transparent hover:border-slate-200">
+                    <div class="w-8 h-8 bg-slate-800 rounded-xl text-white flex items-center justify-center font-black text-xs shadow-md">AD</div>
+                    <div class="hidden sm:block text-left mr-1">
+                        <p class="text-[10px] font-black text-slate-800 leading-none uppercase">Hệ thống</p>
+                        <p id="display-user-role" class="text-[8px] font-bold text-slate-400 leading-none mt-1">...</p>
+                    </div>
+                    <i class="fa-solid fa-angle-down text-[10px] text-slate-300 transition-transform group-hover:rotate-180"></i>
+                </button>
+
+                <div id="dropdown-user" class="hidden group-hover:block absolute right-0 w-64 bg-white rounded-2xl shadow-2xl border border-slate-100 py-2 mt-0 z-[1000] animate-fadeIn">
+                    <div class="admin-only">
+                        <div class="px-4 py-2 mb-2 border-b border-slate-50">
+                            <p class="text-[9px] font-black text-slate-300 uppercase tracking-widest italic">Thiết lập hệ thống</p>
+                        </div>
+                        <div class="flex flex-col gap-0.5 px-2">
+                            <button onclick="ui.switchTab('staff')" class="menu-item-pro w-full text-left">
+                                <i class="fa-solid fa-user-shield text-blue-500"></i>
+                                <span>Quản lý nhân viên</span>
+                            </button>
+                            <button onclick="ui.switchTab('system')" class="menu-item-pro w-full text-left">
+                                <i class="fa-solid fa-gears text-slate-400"></i>
+                                <span>Thông tin trung tâm</span>
+                            </button>
+                            <button onclick="ui.switchTab('config')" class="menu-item-pro w-full text-left">
+                                <i class="fa-solid fa-sliders text-rose-500"></i>
+                                <span>Cấu hình giá & Rank</span>
+                            </button>
+                        </div>
+                        <hr class="my-1.5 border-slate-50">
+                    </div>
+
+                    <div class="thungan-only px-2">
+                        <button onclick="auth.logout()" class="menu-item-pro w-full text-left text-rose-500 hover:bg-rose-50">
+                            <i class="fa-solid fa-power-off"></i>
+                            <span>Đăng xuất tài khoản</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</nav>
+    <main class="max-w-[1400px] mx-auto p-4 md:p-6">
+    <div id="tab-op" class="tab-content active">
+        <div class="bg-white rounded-[2.5rem] p-6 border card-shadow mb-8">
+            <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6 border-b pb-4">
+                
+<div class="">
+    <div class="flex items-center gap-4">
+        <div class="flex items-center bg-slate-100 p-1 rounded-xl border border-slate-200 shadow-sm">
+            <button onclick="app.changeViewDate(-1)" class="w-8 h-8 flex items-center justify-center hover:bg-white hover:text-indigo-600 rounded-lg transition-all text-slate-500">
+                <i class="fa-solid fa-chevron-left text-[10px]"></i>
+            </button>
+            
+            <div class="relative flex items-center px-2">
+                <i class="fa-solid fa-calendar-days text-blue-500 text-[12px] mr-2"></i>
+                <input type="date" id="view-date" onchange="app.reloadTimeline()" 
+                    class="text-[11px] font-black uppercase border-none bg-transparent outline-none w-[110px] cursor-pointer">
+            </div>
+
+            <button onclick="app.changeViewDate(1)" class="w-8 h-8 flex items-center justify-center hover:bg-white hover:text-indigo-600 rounded-lg transition-all text-slate-500">
+                <i class="fa-solid fa-chevron-right text-[10px]"></i>
+            </button>
+        </div>
+
+        <div class="flex bg-slate-100 p-1 rounded-xl">
+            <button onclick="app.switchBookingView('timeline')" id="view-mode-timeline" class="px-3 py-1.5 rounded-lg text-[9px] font-black uppercase transition-all bg-white shadow-sm text-blue-500">
+                <i class="fa-solid fa-chart-gantt mr-1"></i> Timeline
+            </button>
+            <button onclick="app.switchBookingView('list')" id="view-mode-list" class="px-3 py-1.5 rounded-lg text-[9px] font-black uppercase transition-all text-blue-500">
+                <i class="fa-solid fa-list-ul mr-1"></i> Danh sách
+            </button>
+        </div>
+    </div>
+
+    </div>
+                <div class="flex items-center gap-3">
+                    <div id="booking-list-filter" class="hidden">
+                        <select onchange="app.renderBookingList(this.value)" class="bg-slate-100 border-none rounded-lg px-3 py-2 text-[10px] font-black uppercase outline-none">
+                            <option value="today">Hôm nay</option>
+                            <option value="tomorrow">Ngày mai</option>
+                            <option value="this-week">Tuần này</option>
+                            <option value="next-week">Tuần tới</option>
+                        </select>
+                    </div>
+                    <button onclick="ui.openModal('booking')" class="bg-blue-600 text-white px-5 py-2.5 rounded-xl text-[10px] font-black uppercase shadow-lg hover:bg-indigo-700 transition-all">+ Đặt sân trước</button>
+                </div>
+            </div>
+
+            <div id="booking-view-timeline" class="overflow-x-auto">
+                <div class="min-w-[1000px] relative pb-4">
+                    <div id="timeline-hours-header" class="flex ml-24 mb-4"></div>
+                    <div id="timeline-rows" class="space-y-4"></div>
+                </div>
+            </div>
+
+            <div id="booking-view-list" class="hidden">
+    <div class="bg-white rounded-[2rem] border border-slate-200 overflow-hidden shadow-sm">
+        <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse min-w-[1200px]">
+                <thead>
+                    <tr class="bg-slate-50 text-[9px] font-black uppercase text-slate-500 tracking-widest border-b">
+                        <th class="px-4 py-4">Ngày</th>
+                        <th class="px-4 py-4">Khách hàng</th>
+                        <th class="px-4 py-4 text-center">Sân</th>
+                        <th class="px-4 py-4 text-center">Giờ In - Out</th>
+                        <th class="px-4 py-4 text-right">Tiền cọc</th>
+                        <th class="px-4 py-4">Ghi chú</th>
+                        <th class="px-4 py-4 text-center">Trạng thái</th>
+                        <th class="px-4 py-4 text-right">Thao tác</th>
+                    </tr>
+                </thead>
+                <tbody id="booking-list-render" class="text-[11px] font-bold text-slate-700">
+                    </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+        </div>
+
+        <div id="grid-courts" class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-6"></div>
+    </div>
+
+        <div id="tab-bill" class="tab-content">
+    <div class="space-y-6">
+                <div class="bg-white rounded-3xl p-5 border border-slate-200 shadow-sm flex flex-wrap gap-4 items-center">
+            <div class="flex-1 min-w-[250px] relative">
+                <span class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">
+                    <i class="fa-solid fa-magnifying-glass"></i>
+                </span>
+                <input type="text" id="filter-bill-search" oninput="app.renderBills()" 
+                    placeholder="Tìm tên khách, mã đơn, nội dung..." 
+                    class="w-full pl-11 pr-4 py-2.5 bg-slate-50 border-none rounded-2xl text-sm focus:ring-2 focus:ring-blue-500 transition-all">
+            </div>
+            
+            <div class="flex items-center gap-2 bg-slate-50 p-1.5 rounded-2xl border border-slate-100">
+                <div class="flex flex-col px-3">
+                    <span class="text-[9px] font-black text-slate-400 uppercase">Từ ngày</span>
+                    <input type="date" id="filter-bill-from" onchange="app.renderBills()" 
+                        class="bg-transparent border-none p-0 text-xs font-bold focus:ring-0 cursor-pointer">
+                </div>
+                <div class="h-8 w-[1px] bg-slate-200 mx-1"></div>
+                <div class="flex flex-col px-3">
+                    <span class="text-[9px] font-black text-slate-400 uppercase">Đến ngày</span>
+                    <input type="date" id="filter-bill-to" onchange="app.renderBills()" 
+                        class="bg-transparent border-none p-0 text-xs font-bold focus:ring-0 cursor-pointer">
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="bg-slate-50/50 border-b border-slate-100">
+                            <th class="p-5 text-[10px] font-black uppercase text-slate-400 tracking-widest">Thời gian</th>
+                            <th class="p-5 text-[10px] font-black uppercase text-slate-400 tracking-widest">Khách hàng</th>
+                            <th class="p-5 text-[10px] font-black uppercase text-slate-400 tracking-widest">Nội dung giao dịch</th>
+                            <th class="p-5 text-[10px] font-black uppercase text-slate-400 tracking-widest text-center">PTTT</th>
+                            <th class="p-5 text-[10px] font-black uppercase text-slate-400 tracking-widest text-right">Tổng tiền</th>
+                            <th class="p-5 text-[10px] font-black uppercase text-slate-400 tracking-widest text-right">Thao tác</th>
+                        </tr>
+                    </thead>
+                    <tbody id="list-bills-table" class="divide-y divide-slate-50 text-sm">
+                        </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="tab-staff" class="tab-content">
+    <div class="bg-white rounded-3xl p-6 border card-shadow">
+        <div class="flex justify-between items-center mb-6">
+            <div>
+                <h2 class="font-black text-xl uppercase italic text-slate-800">Quản lý tài khoản</h2>
+                <p class="text-[10px] font-bold text-slate-400 uppercase italic">Phân quyền nhân viên hệ thống</p>
+            </div>
+            <button onclick="ui.openModal('staff')" class="bg-blue-600 text-white px-6 py-3 rounded-2xl text-[10px] font-black uppercase shadow-lg hover:bg-indigo-700 transition-all active:scale-95">
+                <i class="fa-solid fa-user-plus mr-2"></i>Thêm tài khoản
+            </button>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="w-full text-left">
+                <thead class="bg-slate-50 text-[10px] font-black uppercase text-slate-400">
+                    <tr>
+                        <th class="p-4">Tên đăng nhập</th>
+                        <th class="p-4">Mật khẩu</th>
+                        <th class="p-4">Quyền</th>
+                        <th class="p-4 text-right">Thao tác</th>
+                    </tr>
+                </thead>
+                <tbody id="list-staff-table" class="divide-y font-bold text-sm">
+                    </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+        <div id="modal-staff" class="modal">
+    <div class="bg-white rounded-[2.5rem] p-8 w-full max-w-md shadow-2xl">
+        <h2 class="font-black text-xl uppercase italic mb-6 text-blue-600">Thông tin tài khoản</h2>
+        <div class="space-y-4">
+            <div>
+                <label class="text-[10px] font-black uppercase text-slate-400 ml-2">Tên đăng nhập</label>
+                <input id="st-user" type="text" class="w-full bg-slate-100 rounded-2xl p-4 font-bold outline-none border-2 border-transparent focus:border-blue-500" placeholder="vd: thungan01">
+            </div>
+            <div>
+                <label class="text-[10px] font-black uppercase text-slate-400 ml-2">Mật khẩu</label>
+                <input id="st-pass" type="text" class="w-full bg-slate-100 rounded-2xl p-4 font-bold outline-none border-2 border-transparent focus:border-blue-500" placeholder="••••••••">
+            </div>
+            <div>
+                <label class="text-[10px] font-black uppercase text-slate-400 ml-2">Phân quyền</label>
+                <select id="st-role" class="w-full bg-slate-100 rounded-2xl p-4 font-bold outline-none border-2 border-transparent focus:border-blue-500">
+                    <option value="Staff">Thu ngân (Staff)</option>
+                    <option value="Quanly">Quản lý (Manager)</option>
+                    <option value="Admin">Tổng quản trị (Admin)</option>
+                </select>
+            </div>
+            <button onclick="app.saveStaff()" class="w-full bg-blue-600 text-white py-4 rounded-2xl font-black uppercase shadow-lg active:scale-95 transition-all mt-4">Lưu tài khoản</button>
+            <button onclick="ui.closeModal('staff')" class="w-full mt-2 text-[10px] font-bold uppercase text-slate-400">Hủy bỏ</button>
+        </div>
+    </div>
+</div>
+
+        <div id="tab-config" class="tab-content p-4 pb-24">
+    <div class="max-w-5xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-6">
+        
+        <div class="space-y-4">
+            <div class="bg-white rounded-3xl p-6 shadow-sm border border-slate-100">
+                <h3 class="font-black text-blue-600 uppercase italic mb-4 text-sm flex items-center gap-2">
+                    <i class="fa-solid fa-tags"></i> Giá thuê theo loại sân
+                </h3>
+                <div id="price-config-container" class="grid grid-cols-2 gap-3">
+                    </div>
+            </div>
+
+            <div class="bg-white rounded-3xl p-6 shadow-sm border border-slate-100">
+                <h3 class="font-black text-rose-500 uppercase italic mb-4 text-sm flex items-center gap-2">
+                    <i class="fa-solid fa-clock"></i> Giờ vàng & Cuối tuần
+                </h3>
+                <div class="grid grid-cols-2 gap-4 mb-4">
+                    <div>
+                        <label class="text-[10px] font-black uppercase text-slate-400 pl-2">Bắt đầu</label>
+                        <input id="conf-peak-start" type="time" class="w-full bg-slate-50 rounded-2xl p-4 font-bold outline-none border border-slate-100">
+                    </div>
+                    <div>
+                        <label class="text-[10px] font-black uppercase text-slate-400 pl-2">Phụ phí (đ/h)</label>
+                        <input id="conf-price-peak" type="number" class="w-full bg-slate-50 rounded-2xl p-4 font-bold outline-none border border-slate-100">
+                    </div>
+                </div>
+                <div>
+                    <label class="text-[10px] font-black uppercase text-slate-400 pl-2">Tăng giá cuối tuần (%)</label>
+                    <input id="conf-weekend-up" type="number" class="w-full bg-slate-50 rounded-2xl p-4 font-bold outline-none border border-slate-100">
+                </div>
+            </div>
+        </div>
+
+        <div class="space-y-4">
+    <div class="bg-white rounded-3xl p-6 shadow-sm border border-slate-100 h-full">
+        <h3 class="font-black text-emerald-600 uppercase italic mb-4 text-sm flex items-center gap-2">
+            <i class="fa-solid fa-crown"></i> Ưu đãi & Thăng hạng
+        </h3>
+        
+        <div class="space-y-6">
+            <div>
+                <p class="text-[10px] font-black text-slate-300 uppercase mb-3 pl-1 italic">Mức giảm giá (%)</p>
+                <div class="grid grid-cols-4 gap-2">
+                    <div class="bg-slate-50 p-2 rounded-2xl border border-slate-100">
+                        <label class="text-[9px] font-black text-slate-400 uppercase text-center block mb-1">Đồng</label>
+                        <input id="conf-m-copper" type="number" class="w-full bg-transparent text-center font-black text-slate-700 outline-none">
+                    </div>
+                    <div class="bg-slate-50 p-2 rounded-2xl border border-slate-100">
+                        <label class="text-[9px] font-black text-slate-400 uppercase text-center block mb-1">Bạc</label>
+                        <input id="conf-m-silver" type="number" class="w-full bg-transparent text-center font-black text-blue-600 outline-none">
+                    </div>
+                    <div class="bg-slate-50 p-2 rounded-2xl border border-slate-100">
+                        <label class="text-[9px] font-black text-slate-400 uppercase text-center block mb-1">Vàng</label>
+                        <input id="conf-m-gold" type="number" class="w-full bg-transparent text-center font-black text-amber-500 outline-none">
+                    </div>
+                    <div class="bg-cyan-50 p-2 rounded-2xl border border-cyan-100">
+                        <label class="text-[9px] font-black text-cyan-600 uppercase text-center block mb-1">K.Cương</label>
+                        <input id="conf-m-diamond" type="number" class="w-full bg-transparent text-center font-black text-cyan-500 outline-none">
+                    </div>
+                </div>
+            </div>
+
+            <div>
+                <p class="text-[10px] font-black text-slate-300 uppercase mb-3 pl-1 italic">Mốc tích lũy (VNĐ)</p>
+                <div class="space-y-3">
+                    <div class="bg-slate-50 p-4 rounded-2xl border border-slate-100">
+                        <label class="text-[9px] font-black text-slate-400 uppercase block mb-1">Lên hạng Bạc</label>
+                        <input id="conf-rank-silver" type="number" class="w-full bg-transparent font-black text-slate-700 outline-none text-lg">
+                    </div>
+                    <div class="bg-slate-50 p-4 rounded-2xl border border-slate-100">
+                        <label class="text-[9px] font-black text-slate-400 uppercase block mb-1">Lên hạng Vàng</label>
+                        <input id="conf-rank-gold" type="number" class="w-full bg-transparent font-black text-slate-700 outline-none text-lg">
+                    </div>
+                    <div class="bg-cyan-50/50 p-4 rounded-2xl border border-cyan-100">
+                        <label class="text-[9px] font-black text-cyan-600 uppercase block mb-1">Lên hạng Kim cương</label>
+                        <input id="conf-rank-diamond" type="number" class="w-full bg-transparent font-black text-cyan-600 outline-none text-lg">
+                    </div>
+                </div>
+            </div>
+
+            <button onclick="app.saveFullConfig()" class="w-full bg-slate-900 text-white py-5 rounded-3xl font-black uppercase shadow-lg hover:bg-black transition-all mt-4">
+                <i class="fa-solid fa-check-double mr-2"></i> Lưu tất cả
+            </button>
+        </div>
+    </div>
+</div>
+
+    </div>
+</div>
+
+<div id="tab-system" class="tab-content p-4">
+    <div class="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-8">
+        
+        <div class="space-y-6">
+            <div class="bg-white rounded-3xl p-6 shadow-sm border border-slate-100">
+                <h3 class="font-black text-slate-900 uppercase italic mb-6 flex items-center gap-2 text-lg">
+                    <i class="fa-solid fa-sliders text-blue-600"></i> Thiết lập thông tin
+                </h3>
+                
+                <div class="space-y-4">
+                    <div>
+                        <label class="text-[10px] font-black uppercase text-slate-400 pl-2">Tên Sân / Cửa hàng</label>
+                        <input id="sys-name" type="text" oninput="app.updatePrintPreview()" placeholder="Vd: PICKLEBALL PRO CENTER" class="w-full bg-slate-50 rounded-2xl p-4 font-bold outline-none border border-slate-100 focus:border-blue-500">
+                    </div>
+                    <div>
+                        <label class="text-[10px] font-black uppercase text-slate-400 pl-2">Địa chỉ</label>
+                        <input id="sys-address" type="text" oninput="app.updatePrintPreview()" placeholder="Số 123, đường..." class="w-full bg-slate-50 rounded-2xl p-4 font-bold outline-none border border-slate-100">
+                    </div>
+                    <div>
+                        <label class="text-[10px] font-black uppercase text-slate-400 pl-2">Số điện thoại</label>
+                        <input id="sys-phone" type="text" oninput="app.updatePrintPreview()" placeholder="090x.xxx.xxx" class="w-full bg-slate-50 rounded-2xl p-4 font-bold outline-none border border-slate-100">
+                    </div>
+                    <div>
+                        <label class="text-[10px] font-black uppercase text-slate-400 pl-2">Lời chào chân trang (Footer)</label>
+                        <textarea id="sys-footer" oninput="app.updatePrintPreview()" rows="2" placeholder="Cảm ơn quý khách!" class="w-full bg-slate-50 rounded-2xl p-4 font-medium outline-none border border-slate-100"></textarea>
+                    </div>
+                    
+                    <hr class="border-slate-50">
+                    
+                    <h4 class="font-black text-[10px] uppercase text-rose-500 mb-2 italic">Cấu hình QR Code Thanh toán</h4>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="text-[9px] font-black text-slate-400 uppercase">Ngân hàng (Vd: vcb, mbb...)</label>
+                            <input id="sys-bank-id" type="text" oninput="app.updatePrintPreview()" placeholder="mbbank" class="w-full bg-slate-50 rounded-xl p-3 text-xs font-bold outline-none border border-slate-100">
+                        </div>
+                        <div>
+                            <label class="text-[9px] font-black text-slate-400 uppercase">Số tài khoản</label>
+                            <input id="sys-bank-no" type="text" oninput="app.updatePrintPreview()" placeholder="123456789" class="w-full bg-slate-50 rounded-xl p-3 text-xs font-bold outline-none border border-slate-100">
+                        </div>
+                    </div>
+
+                    <button onclick="app.saveSystemConfig()" class="w-full bg-blue-600 text-white py-5 rounded-3xl font-black uppercase shadow-lg hover:shadow-blue-200 transition-all mt-4">
+                        <i class="fa-solid fa-save mr-2"></i> Lưu cấu hình hệ thống
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div class="sticky top-4">
+            <div class="bg-slate-200 p-8 rounded-3xl flex justify-center shadow-inner min-h-[600px]">
+                <div id="print-preview-paper" class="bg-white w-[300px] shadow-2xl p-6 text-slate-800 text-[13px] leading-relaxed relative">
+                    <div class="text-center border-b border-dashed border-slate-300 pb-4 mb-4">
+                        <h2 id="view-sys-name" class="font-black text-lg uppercase">TÊN SÂN CỦA BẠN</h2>
+                        <p id="view-sys-address" class="text-[11px]">Địa chỉ sân tại đây</p>
+                        <p id="view-sys-phone" class="text-[11px] font-bold italic">SĐT: 0900.000.000</p>
+                    </div>
+
+                    <div class="space-y-2 mb-4">
+                        <div class="flex justify-between font-bold text-[15px] border-b pb-1">
+                            <span>TỔNG CỘNG:</span>
+                            <span>500.000đ</span>
+                        </div>
+                    </div>
+
+                    <div class="text-center space-y-4">
+                        <p id="view-sys-footer" class="italic text-[11px]">Cảm ơn quý khách. Hẹn gặp lại!</p>
+                        
+                        <div class="pt-4 border-t border-dashed border-slate-200 flex flex-col items-center">
+                            <p class="text-[9px] font-black uppercase mb-2 text-slate-400">Quét mã thanh toán</p>
+                            <img id="view-sys-qr" src="https://img.vietqr.io/image/mbbank-123456789-compact.png?amount=0&addTag=0" class="w-32 h-32 border p-1 rounded-lg">
+                        </div>
+                    </div>
+
+                    <div class="absolute -bottom-2 left-0 w-full h-4 bg-[url('https://www.transparenttextures.com/patterns/zigzag.png')] opacity-10"></div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+        <div id="tab-court" class="tab-content">
+            <div class="bg-white rounded-3xl p-6 border card-shadow">
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="font-black text-xl uppercase italic">Cài đặt Sân</h2>
+                    <button onclick="ui.openModal('court')" class="bg-blue-600 text-white px-5 py-2.5 rounded-xl text-[10px] font-black uppercase">+ Thêm sân</button>
+                </div>
+                <div class="overflow-x-auto"><table class="w-full text-left"><thead class="bg-slate-50 text-[10px] font-black uppercase text-slate-400"><tr><th class="p-4">Tên sân</th><th class="p-4">Loại</th><th class="p-4">Trạng thái</th><th class="p-4 text-right">#</th></tr></thead><tbody id="list-courts-table" class="divide-y font-bold text-sm"></tbody></table></div>
+            </div>
+        </div>
+
+      <div id="tab-service" class="tab-content w-full max-w-full overflow-hidden">
+    <div class="bg-white rounded-[2rem] p-4 md:p-8 border border-slate-100 shadow-[0_10px_40px_rgba(0,0,0,0.02)]">
+        
+        <div class="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6 mb-8">
+            <div>
+                <h2 class="font-black text-2xl uppercase italic tracking-tighter text-slate-800 flex items-center gap-3">
+                    <span class="w-2 h-8 bg-emerald-500 rounded-full block"></span>
+                    Menu Dịch vụ
+                </h2>
+                <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1 ml-5">Quản lý danh mục & Kho hàng</p>
+            </div>
+
+            <div class="flex flex-wrap items-center gap-2 w-full lg:w-auto">
+                <button onclick="app.downloadExcelTemplate()" 
+                        class="flex-1 lg:flex-none bg-slate-50 text-slate-500 px-4 py-2.5 rounded-2xl text-[9px] font-black uppercase border border-slate-100 hover:bg-slate-200 transition-all flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-download"></i> Mẫu Excel
+                </button>
+
+                <input type="file" id="import-excel-input" class="hidden" accept=".xlsx, .xls" onchange="app.handleImportExcel(event)">
+                <button onclick="document.getElementById('import-excel-input').click()" 
+                        class="flex-1 lg:flex-none bg-emerald-50 text-emerald-600 px-4 py-2.5 rounded-2xl text-[9px] font-black uppercase border border-emerald-100 hover:bg-emerald-600 hover:text-white transition-all flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-file-import"></i> Import
+                </button>
+
+                <button onclick="ui.openModal('service')" 
+                        class="w-full lg:w-auto bg-slate-900 text-white px-5 py-3 rounded-2xl text-[10px] font-black uppercase shadow-lg hover:bg-emerald-600 transition-all flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-plus"></i> Thêm món mới
+                </button>
+            </div>
+        </div>
+
+        <div class="rounded-3xl border border-slate-50 overflow-hidden bg-slate-50/30">
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse min-w-[700px]">
+                    <thead class="bg-slate-50 text-[10px] font-black uppercase text-slate-400 border-b border-slate-100">
+                        <tr>
+                            <th class="p-5 w-20">Ảnh</th>
+                            <th class="p-5">Tên món</th>
+                            <th class="p-5 text-center">Loại</th>
+                            <th class="p-5">Giá bán</th>
+                            <th class="p-5 text-center">Tồn kho</th>
+                            <th class="p-5 text-right">#</th>
+                        </tr>
+                    </thead>
+                    <tbody id="list-services-table" class="bg-white divide-y divide-slate-50 font-bold text-sm">
+                        </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+        <div id="tab-stock" class="tab-content animate-fade-in">
+    <div class="bg-white rounded-[2rem] p-7 shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100">
+        
+        <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
+            <div>
+                <h2 class="font-black text-2xl tracking-tight text-slate-800 flex items-center gap-2">
+                    <i class="fa-solid fa-box-archive text-blue-500 text-xl"></i>
+                    Lịch sử Nhập kho
+                </h2>
+                <p class="text-[11px] font-medium text-slate-400 mt-1 ml-7">Theo dõi chi tiết các đợt nhập hàng</p>
+            </div>
+            
+            <button onclick="app.initStockModal(); ui.openModal('stock')" 
+                    class="bg-blue-600 hover:bg-indigo-700 text-white px-6 py-2.5 rounded-xl text-[11px] font-bold uppercase tracking-wide shadow-md shadow-indigo-200 transition-all flex items-center gap-2">
+                <i class="fa-solid fa-plus text-[10px]"></i>
+                Tạo Phiếu mới
+            </button>
+        </div>
+        
+        <div class="overflow-x-auto">
+            <table class="w-full text-left border-separate border-spacing-y-2">
+                <thead>
+                    <tr class="text-[10px] font-bold uppercase tracking-widest text-slate-400">
+                        <th class="px-5 py-3">Thời gian</th>
+                        <th class="px-5 py-3">Sản phẩm</th>
+                        <th class="px-5 py-3 text-center">Số lượng</th>
+                        <th class="px-5 py-3 text-right">Thành tiền</th>
+                        <th class="px-5 py-3 text-center">Trạng thái</th>
+                        <th class="px-5 py-3 text-right">Thao tác</th>
+                    </tr>
+                </thead>
+                <tbody id="list-stocks-table">
+                    </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+        <div id="tab-pos" class="tab-content p-4 pb-24">
+    <div class="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div class="lg:col-span-2 space-y-4">
+    <div class="bg-white rounded-[2.5rem] p-6 shadow-sm border border-slate-50">
+        
+        <div class="flex items-center gap-6 mb-8">
+            <div id="pos-category-list" class="flex-1 flex items-center gap-2 overflow-x-auto no-scrollbar py-1">
+                <button onclick="app.filterPosByCategory('all')" 
+                    class="cat-pill active whitespace-nowrap px-5 py-2 rounded-full text-[10px] font-black uppercase tracking-widest transition-all bg-slate-100 text-slate-400">
+                    Tất cả
+                </button>
+                </div>
+
+            <div class="relative w-48 md:w-64">
+                <i class="fa-solid fa-magnifying-glass absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 text-[10px]"></i>
+                <input type="text" 
+                    oninput="app.renderPosProducts(this.value)" 
+                    placeholder="Tìm món..." 
+                    class="w-full bg-slate-50 border-none rounded-2xl pl-10 pr-4 py-2.5 text-[11px] font-bold outline-none focus:ring-2 focus:ring-blue-400 transition-all">
+            </div>
+        </div>
+
+        <div id="pos-product-list" class="grid grid-cols-2 md:grid-cols-3 gap-5 overflow-y-auto max-h-[600px] no-scrollbar pr-1">
+            </div>
+    </div>
+</div>
+
+        <div class="lg:col-span-1">
+            <div class="bg-slate-900 rounded-[2rem] p-6 shadow-xl text-white sticky top-4">
+                <div class="flex-1 flex flex-col min-h-0">
+    <div class="flex justify-between items-center mb-4">
+        <h3 class="font-black text-blue-400 uppercase italic text-[11px] tracking-widest">Giỏ hàng</h3>
+        <button onclick="app.clearPosCart()" class="text-[9px] text-slate-500 hover:text-rose-500 uppercase font-black transition-colors">
+            <i class="fa-solid fa-trash-can mr-1"></i>Xóa hết
+        </button>
+    </div>
+
+    <div class="flex-1 overflow-y-auto no-scrollbar max-h-[400px]">
+        <table class="w-full text-left border-collapse">
+            <thead>
+                <tr class="text-[9px] uppercase text-slate-500 font-black border-b border-white/10">
+                    <th class="py-2 pl-2">Món</th>
+                    <th class="py-2 text-center">SL</th>
+                    <th class="py-2 text-right pr-2">Tiền</th>
+                    <th class="py-2 w-6 text-center">#</th>
+                </tr>
+            </thead>
+            <tbody id="pos-cart-render" class="divide-y divide-white/5">
+                <tr><td colspan="4" class="py-10 text-center text-slate-500 italic text-[10px]">Trống</td></tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+                <div class="border-t border-white/10 pt-4">
+                    <div class="flex justify-between items-center mb-4">
+                        <span class="text-[10px] font-black text-slate-400 uppercase">Tổng tiền:</span>
+                        <span id="pos-total" class="font-black text-xl text-white">0đ</span>
+                    </div>
+        <div class="mb-4 relative">
+    <label class="text-[10px] font-black text-slate-400 uppercase mb-2 block">Khách hàng mua lẻ</label>
+    <div class="relative">
+        <input type="text" id="pos-customer-search" 
+               class="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-white text-xs focus:outline-none focus:border-blue-500" 
+               placeholder="Gõ tên hoặc SĐT hội viên..."
+               oninput="app.searchMemberForPOS(this.value)"
+               autocomplete="off">
+        
+        <input type="hidden" id="pos-member-id" value="">
+
+        <button onclick="app.resetPOSCustomer()" id="btn-reset-pos-cust" class="absolute right-3 top-3 hidden text-slate-400 hover:text-white">
+            <i class="fa-solid fa-circle-xmark"></i>
+        </button>
+
+        <div id="pos-member-results" class="absolute z-[100] w-full bg-white shadow-2xl rounded-xl mt-2 max-h-48 overflow-y-auto hidden border border-blue-100 text-slate-800">
+        </div>
+    </div>
+</div>            
+                    <button onclick="app.checkoutPos()" class="w-full bg-blue-600 text-white py-4 rounded-2xl font-black uppercase text-xs shadow-lg">Xác nhận bán</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="tab-all-customers" class="tab-content">
+    <div class="bg-white rounded-[2rem] p-6 border shadow-sm">
+        <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6 border-b pb-4">
+            <h2 class="text-xl font-black text-slate-800 uppercase tracking-tight">Danh bạ khách hàng</h2>
+            
+            <div class="flex items-center gap-2 w-full md:w-auto">
+                <button onclick="document.getElementById('cust-id').value=''; document.getElementById('cust-name').value=''; document.getElementById('cust-phone').value=''; document.getElementById('view-cust-id').value='Mã mới'; ui.openModal('customer')" class="bg-blue-600 text-white px-4 py-2.5 rounded-xl text-[10px] font-black uppercase shadow-lg hover:bg-blue-700 transition-all">
+                    <i class="fa-solid fa-user-plus mr-1"></i> Thêm khách
+                </button>
+
+                <div class="relative flex-1 md:w-64">
+                    <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-300 text-[10px]"></i>
+                    <input type="text" id="search-all-cust" oninput="app.renderAllCustomers()" 
+                        placeholder="Tìm tên hoặc SĐT..." 
+                        class="w-full pl-9 pr-4 py-2.5 bg-slate-50 border-none rounded-xl text-[11px] font-bold outline-none focus:ring-2 focus:ring-blue-500">
+                </div>
+            </div>
+        </div>
+
+        <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse">
+                <thead>
+                    <tr class="bg-slate-50 text-[10px] font-black uppercase text-slate-400 border-b">
+                        <th class="p-4">Mã KH</th>
+                        <th class="p-4">Khách hàng</th>
+                        <th class="p-4">Số điện thoại</th>
+                        <th class="p-4">Phân loại</th>
+                        <th class="p-4 text-center">Số lần chơi</th>
+                        <th class="p-4 text-right">Tổng chi tiêu</th>
+                        <th class="p-4 text-center">Lần cuối ghé</th>
+                        <th class="p-4 text-right pr-6">#</th>
+                    </tr>
+                </thead>
+                <tbody id="list-all-customers-table" class="divide-y font-bold text-sm text-slate-700"></tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div id="modal-customer" class="modal hidden ...">
+    <div class="bg-white p-8 rounded-[2rem] w-96 shadow-2xl relative">
+        <h2 class="text-blue-600 font-[900] italic uppercase text-center mb-6 tracking-tighter">Thông tin khách hàng</h2>
+
+        <input type="hidden" id="cust-id">
+
+        <div class="space-y-4">
+    <div id="group-cust-id">
+        <label class="text-[10px] font-black text-slate-400 uppercase ml-2">Mã khách hàng</label>
+        <input type="text" id="view-cust-id" readonly 
+            class="w-full px-5 py-3 bg-slate-50 border-none rounded-2xl text-sm font-bold text-slate-400 outline-none cursor-not-allowed" placeholder="KH00">
+    </div>
+
+    <div>
+        <label class="text-[10px] font-black text-slate-400 uppercase ml-2">Số điện thoại</label>
+        <input type="text" id="cust-phone" 
+            class="w-full px-5 py-3 bg-slate-50 border-none rounded-2xl text-sm font-bold text-blue-600 outline-none focus:ring-2 focus:ring-blue-500" placeholder="090...">
+    </div>
+
+    <div>
+        <label class="text-[10px] font-black text-slate-400 uppercase ml-2">Tên khách hàng</label>
+        <input type="text" id="cust-name" 
+            class="w-full px-5 py-3 bg-slate-50 border-none rounded-2xl text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-blue-500" placeholder="Nhập tên...">
+    </div>
+</div>
+
+        <button onclick="app.saveCustomer()" class="w-full bg-blue-600 text-white font-black py-4 rounded-2xl mt-6 shadow-lg hover:bg-blue-700 transition-all uppercase tracking-widest text-xs">
+            Lưu thông tin
+        </button>
+        
+        <p onclick="ui.closeModal('customer')" class="text-center text-[10px] font-black text-slate-300 uppercase mt-4 cursor-pointer hover:text-slate-500">Hủy bỏ</p>
+    </div>
+</div>
+        <div id="tab-member" class="tab-content">
+    <div class="bg-white rounded-3xl p-6 border card-shadow">
+        <div class="flex justify-between items-center mb-6">
+            <h2 class="font-black text-xl uppercase">Quản lý Hội viên</h2>
+            <button onclick="ui.openModal('member')" class="bg-blue-600 text-white px-5 py-2.5 rounded-xl text-[10px] font-black uppercase">+ Thêm khách</button>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="w-full text-left">
+                <thead class="bg-slate-50 text-[10px] font-black uppercase text-slate-400">
+                    <tr>
+                        <th class="p-4">Mã KH</th> 
+                        <th class="p-4">Tên</th>
+                        <th class="p-4">SĐT</th>
+                        <th class="p-4 text-emerald-600">Ví dư</th>
+                        <th class="p-4 text-blue-600">Tổng chi tiêu</th> 
+                        <th class="p-4">Hạng</th>
+                        <th class="p-4 text-right">#</th>
+                    </tr>
+                </thead>
+                <tbody id="list-members-table" class="divide-y font-bold text-sm"></tbody>
+            </table>
+        </div>
+    </div>
+</div>
+    </main>
+    <input type="hidden" id="current-checkout-id" value="">
+
+    <div id="modal-recharge" class="modal">
+        <div class="bg-white rounded-[2.5rem] p-8 w-full max-w-md shadow-2xl">
+            <h2 class="font-black text-xl uppercase italic mb-6 text-emerald-600">Nạp tiền vào ví</h2>
+            <input type="hidden" id="recharge-member-id">
+            <p id="recharge-member-name" class="font-bold text-sm mb-4"></p>
+            <div class="space-y-4">
+                <div><label class="text-[10px] font-black uppercase text-slate-400 pl-2">Số tiền nạp (VNĐ)</label><input id="recharge-amount" type="number" class="w-full bg-slate-100 rounded-2xl p-4 font-bold outline-none border-2 border-transparent focus:border-emerald-500" placeholder="0"></div>
+                <div>
+                    <label class="text-[10px] font-black uppercase text-slate-400 pl-2">Phương thức</label>
+                    <select id="recharge-method" class="w-full bg-slate-100 rounded-2xl p-4 font-bold outline-none border-2 border-transparent focus:border-emerald-500">
+                        <option value="Tiền mặt">Tiền mặt</option><option value="Chuyển khoản">Chuyển khoản</option>
+                    </select>
+                </div>
+                <button onclick="app.confirmRecharge()" class="w-full bg-emerald-600 text-white py-4 rounded-2xl font-black uppercase shadow-lg mt-4">Xác nhận nạp</button>
+                <button onclick="ui.closeModal('recharge')" class="w-full text-[10px] font-bold uppercase text-slate-400">Hủy</button>
+            </div>
+        </div>
+    </div>
+    
+    
+    <div id="modal-service-cat" class="modal">
+    <div class="bg-white rounded-[2.5rem] p-8 w-full max-w-sm shadow-2xl">
+        <div class="flex justify-between items-center mb-6">
+            <h2 class="font-black text-xl uppercase italic text-blue-600">Loại Dịch Vụ</h2>
+            <button onclick="ui.closeModal('service-cat')" class="text-slate-400 hover:text-red-500"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        
+        <div class="space-y-4 mb-6">
+            <div>
+                <label class="text-[10px] font-black text-slate-400 ml-2 uppercase">Tên phân loại</label>
+                <input id="cat-name-input" type="text" class="w-full bg-slate-100 rounded-2xl p-4 font-bold outline-none border-2 border-transparent focus:border-blue-500 mt-1" placeholder="Ví dụ: Nước uống...">
+            </div>
+            <button onclick="app.saveServiceCategory()" class="w-full bg-blue-600 text-white p-4 rounded-2xl font-black uppercase shadow-lg shadow-blue-200 active:scale-95 transition-all">
+                Lưu phân loại
+            </button>
+        </div>
+
+        <div class="border-t pt-4">
+            <div id="service-cat-list" class="space-y-2 max-h-48 overflow-y-auto pr-2">
+                </div>
+        </div>
+    </div>
+</div>
+
+    <div id="modal-checkin" class="modal">
+    <div class="bg-white rounded-[2.5rem] p-8 w-full max-w-md shadow-2xl border-t-[10px] border-emerald-500">
+        <h2 class="font-black text-2xl uppercase italic mb-6 text-slate-800 flex items-center gap-2">
+            <i class="fa-solid fa-bolt text-emerald-500"></i> Nhận sân nhanh
+        </h2>
+        
+        <input type="hidden" id="checkin-court-id">
+        <input type="hidden" id="checkin-cust-id">
+
+        <div class="space-y-4">
+            <div class="relative group">
+                <label class="text-[10px] font-black uppercase text-slate-400 pl-3 mb-1 block italic">Tìm khách hàng (Tên hoặc SĐT)</label>
+                <div class="flex gap-2">
+                    <div class="relative flex-1">
+                        <i class="fa-solid fa-user-magnifying-glass absolute left-4 top-4 text-slate-300"></i>
+                        <input id="checkin-name" type="text" 
+                            oninput="app.suggestCheckinCustomer(this.value)" 
+                            class="w-full bg-slate-50 border border-slate-100 rounded-2xl p-4 pl-11 font-black text-emerald-700 outline-none focus:bg-white focus:border-emerald-500 transition-all" 
+                            placeholder="Gõ tên hoặc SĐT...">
+                        
+                        <div id="checkin-cust-suggestions" class="absolute z-[100] left-0 right-0 bg-white shadow-2xl rounded-2xl mt-1 hidden max-h-48 overflow-y-auto border border-slate-100 animate-fadeIn">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-slate-50 p-3 rounded-2xl border border-slate-100">
+                <label class="text-[10px] font-black uppercase text-slate-400 pl-1 mb-1 block italic">Số điện thoại</label>
+                <input id="checkin-phone" type="text" class="w-full bg-transparent font-bold outline-none text-slate-600" placeholder="09xxxxxxxx">
+            </div>
+
+            <div class="pt-4 space-y-3">
+                <button onclick="app.confirmCheckin()" class="w-full bg-emerald-600 text-white py-4 rounded-2xl font-black uppercase shadow-xl shadow-emerald-100 hover:bg-emerald-700 active:scale-95 transition-all italic">
+                    <i class="fa-solid fa-play mr-2"></i> Bắt đầu chơi ngay
+                </button>
+                <button onclick="ui.closeModal('checkin')" class="w-full py-2 text-[10px] font-black uppercase text-slate-400 tracking-widest hover:text-slate-600 transition-colors">Hủy bỏ</button>
+            </div>
+        </div>
+    </div>
+</div>
+<div id="modal-manage-booking" class="modal">
+    <div class="bg-white p-6 rounded-[2.5rem] w-full max-w-md shadow-2xl border-t-[10px] border-blue-600">
+        <div class="flex justify-between items-center mb-4">
+            <h3 class="text-lg font-black uppercase italic text-slate-800">Chỉnh sửa lịch đặt</h3>
+            <span id="manage-b-id-display" class="text-[9px] font-bold text-slate-300 bg-slate-50 px-2 py-1 rounded-lg"></span>
+        </div>
+        
+        <input type="hidden" id="manage-b-id">
+
+        <div class="space-y-3 mb-6">
+            <div class="grid grid-cols-2 gap-3">
+                <div class="relative">
+                    <label class="text-[9px] font-black uppercase text-slate-400 pl-2 mb-1 block">Khách hàng</label>
+                    <input id="manage-b-name" type="text" class="w-full bg-slate-50 border border-slate-100 rounded-2xl p-3 text-sm font-black text-blue-700 outline-none focus:bg-white focus:border-blue-500 transition-all">
+                </div>
+                <div>
+                    <label class="text-[9px] font-black uppercase text-slate-400 pl-2 mb-1 block">Số điện thoại</label>
+                    <input id="manage-b-phone" type="text" class="w-full bg-slate-50 border border-slate-100 rounded-2xl p-3 text-sm font-bold text-slate-600 outline-none">
+                </div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-3">
+                <div>
+                    <label class="text-[9px] font-black uppercase text-slate-400 pl-2 mb-1 block">Chọn Sân</label>
+                    <select id="manage-b-court-id" class="w-full bg-slate-50 border border-slate-100 rounded-2xl p-3 text-sm font-black text-rose-600 outline-none appearance-none cursor-pointer">
+                        </select>
+                </div>
+                <div>
+                    <label class="text-[9px] font-black uppercase text-slate-400 pl-2 mb-1 block">Ngày đặt</label>
+                    <input id="manage-b-date" type="date" class="w-full bg-slate-50 border border-slate-100 rounded-2xl p-3 text-sm font-bold text-slate-600 outline-none cursor-pointer">
+                </div>
+            </div>
+
+            <div class="bg-blue-50/50 p-3 rounded-2xl border border-blue-100 grid grid-cols-2 gap-3">
+                <div>
+                    <label class="text-[9px] font-black uppercase text-blue-400 pl-1 mb-1 block">Giờ vào</label>
+                    <input id="manage-b-start" type="time" class="w-full bg-white rounded-xl p-2 text-sm font-black text-slate-700 outline-none border border-blue-100">
+                </div>
+                <div>
+                    <label class="text-[9px] font-black uppercase text-blue-400 pl-1 mb-1 block">Giờ ra</label>
+                    <input id="manage-b-end" type="time" class="w-full bg-white rounded-xl p-2 text-sm font-black text-slate-700 outline-none border border-blue-100">
+                </div>
+            </div>
+
+            <div class="grid grid-cols-12 gap-3">
+                <div class="col-span-5">
+                    <label class="text-[9px] font-black uppercase text-slate-400 pl-2 mb-1 block">Tiền cọc (đ)</label>
+                    <input id="manage-b-deposit" type="number" class="w-full bg-emerald-50 border border-emerald-100 rounded-2xl p-3 text-sm font-black text-emerald-600 outline-none">
+                </div>
+                <div class="col-span-7">
+                    <label class="text-[9px] font-black uppercase text-slate-400 pl-2 mb-1 block">Ghi chú nhanh</label>
+                    <input id="manage-b-note" type="text" class="w-full bg-slate-50 border border-slate-100 rounded-2xl p-3 text-sm font-bold text-slate-500 outline-none" placeholder="...">
+                </div>
+            </div>
+        </div>
+
+        <div class="space-y-2">
+            <button onclick="app.saveUpdateBooking()" class="w-full bg-emerald-600 text-white py-4 rounded-2xl font-black uppercase italic shadow-lg shadow-emerald-100 hover:bg-emerald-700 transition-all active:scale-95">
+                <i class="fa-solid fa-floppy-disk mr-2"></i> Cập nhật lịch đặt
+            </button>
+
+            <button onclick="app.confirmCheckinFromBooking()" class="w-full bg-blue-600 text-white py-4 rounded-2xl font-black uppercase italic shadow-lg shadow-blue-100 hover:bg-blue-700 transition-all active:scale-95">
+                <i class="fa-solid fa-play mr-2"></i> Check-in ngay
+            </button>
+            
+            <div class="flex gap-2">
+                <button onclick="app.confirmDeleteBooking()" class="flex-1 bg-rose-50 text-rose-500 py-3 rounded-2xl font-black text-[10px] uppercase hover:bg-rose-100 transition-colors">Hủy lịch</button>
+                <button onclick="ui.closeModal('manage-booking')" class="flex-1 bg-slate-100 text-slate-400 py-3 rounded-2xl font-black text-[10px] uppercase hover:bg-slate-200 transition-colors">Đóng</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+    <div id="modal-court-detail" class="modal">
+    <div class="bg-white rounded-[2.5rem] p-0 w-full max-w-lg shadow-2xl overflow-hidden border-t-[10px] border-blue-600">
+        <div class="p-8 pb-6 bg-slate-50 flex justify-between items-end">
+            <div>
+                <div class="flex items-center gap-2 mb-1">
+                    <span class="w-3 h-3 rounded-full bg-emerald-500 animate-pulse"></span>
+                    <h2 id="detail-court-name" class="font-black text-3xl uppercase italic text-slate-800">Sân</h2>
+                </div>
+                <p id="detail-customer" class="text-blue-600 font-black text-sm uppercase tracking-wider bg-blue-50 px-3 py-1 rounded-lg inline-block"></p>
+            </div>
+            <div class="text-right">
+                <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">Thời gian bắt đầu</span>
+                <p id="detail-start-time" class="font-black text-2xl text-slate-700 bg-white px-4 py-2 rounded-2xl shadow-sm border border-slate-100"></p>
+            </div>
+        </div>
+
+        <div class="p-8 space-y-6">
+            <div>
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="font-black text-xs uppercase text-slate-500 italic flex items-center gap-2">
+                        <i class="fa-solid fa-utensils text-blue-500"></i> Dịch vụ sử dụng
+                    </h3>
+                </div>
+
+                <div class="relative mb-4 group">
+                    <i class="fa-solid fa-magnifying-glass absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-blue-500 transition-colors"></i>
+                    <input type="text" 
+                           id="service-search-input" 
+                           placeholder="Thêm món nhanh (vd: Sting, Nước suối)..." 
+                           onfocus="app.filterServiceDropdown(this.value)"
+                           oninput="app.filterServiceDropdown(this.value)"
+                           class="w-full bg-slate-50 border-2 border-slate-100 rounded-2xl p-4 pl-12 font-bold text-sm outline-none focus:border-blue-500 focus:bg-white transition-all">
+                    
+                    <div id="service-dropdown-list" class="hidden absolute left-0 right-0 top-full mt-2 bg-white border border-slate-100 shadow-2xl z-[100] rounded-2xl max-h-60 overflow-y-auto"></div>
+                    <input type="hidden" id="add-service-id">
+                    <input type="hidden" id="add-service-qty" value="1">
+                </div>
+
+                <div id="detail-services-list" class="space-y-3 max-h-52 overflow-y-auto pr-2 custom-scrollbar">
+                    </div>
+            </div>
+
+            <hr class="border-slate-100">
+
+            <div class="grid grid-cols-12 gap-3 items-center">
+                <div class="col-span-8 relative">
+                    <select id="transfer-to-court-id" class="w-full bg-indigo-50/50 border border-indigo-100 rounded-2xl p-4 font-black text-xs text-indigo-600 outline-none appearance-none cursor-pointer">
+                        <option value="">-- Chuyển sang sân --</option>
+                    </select>
+                    <i class="fa-solid fa-chevron-down absolute right-4 top-1/2 -translate-y-1/2 text-indigo-300 pointer-events-none"></i>
+                </div>
+                <button onclick="app.transferCourt()" class="col-span-4 bg-indigo-100 text-indigo-600 h-full rounded-2xl font-black text-[10px] uppercase hover:bg-indigo-600 hover:text-white transition-all">
+                    Xác nhận đổi
+                </button>
+            </div>
+
+            <div class="grid grid-cols-2 gap-4 pt-4">
+                <button onclick="ui.openCheckout()" class="bg-emerald-600 text-white py-5 rounded-[1.5rem] font-black uppercase text-sm shadow-xl shadow-emerald-100 hover:bg-emerald-700 active:scale-95 transition-all flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-file-invoice-dollar text-lg"></i> Thanh toán
+                </button>
+                <div class="flex flex-col gap-2">
+                    <button onclick="ui.closeModal('court-detail')" class="bg-slate-100 text-slate-500 py-3 rounded-2xl font-black uppercase text-[10px] hover:bg-slate-200 transition-all">Đóng</button>
+                    <button onclick="app.cancelCourtRequest()" class="text-rose-400 font-black uppercase text-[9px] hover:text-rose-600 transition-colors">Hủy sân đang chơi</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+    <div id="modal-checkout" class="modal">
+    <div class="bg-white rounded-[2.5rem] p-8 w-full max-w-md shadow-2xl relative border border-slate-100">
+        <h2 class="font-[900] text-2xl uppercase italic text-center mb-6 tracking-tighter text-slate-800">Thanh toán</h2>
+        
+        <div id="bill-content" class="space-y-3 mb-4"></div>
+
+        <div class="bg-slate-50 p-4 rounded-3xl border border-slate-100 mb-4">
+            <label class="text-[9px] font-black uppercase text-slate-400 ml-2 mb-2 block italic">Chiết khấu tùy chỉnh</label>
+            <div class="grid grid-cols-2 gap-3">
+                <div class="relative">
+                    <input type="number" id="manual-discount-cash" oninput="ui.handleDiscountInput('cash')" 
+                           class="w-full bg-white border-2 border-transparent focus:border-rose-500 rounded-2xl p-3 font-black text-rose-600 outline-none shadow-sm text-sm" 
+                           placeholder="Số tiền (đ)">
+                    <span class="absolute right-3 top-3.5 text-[10px] font-bold text-slate-300">VNĐ</span>
+                </div>
+                <div class="relative">
+                    <input type="number" id="manual-discount-percent" oninput="ui.handleDiscountInput('percent')" 
+                           class="w-full bg-white border-2 border-transparent focus:border-blue-500 rounded-2xl p-3 font-black text-blue-600 outline-none shadow-sm text-sm" 
+                           placeholder="Phần trăm (%)">
+                    <span class="absolute right-3 top-3.5 text-[10px] font-bold text-slate-300">%</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="mb-6">
+            <label class="text-[10px] font-black uppercase text-slate-400 ml-2">Phương thức thanh toán</label>
+            <select id="payment-method-select" class="w-full bg-slate-100 rounded-xl p-3 font-bold outline-none border-2 border-transparent focus:border-blue-500 mt-2 appearance-none">
+                <option value="Tiền mặt">💵 Tiền mặt</option>
+                <option value="Chuyển khoản">📲 Chuyển khoản</option>
+                <option value="Ví hội viên">💳 Ví hội viên (Trừ thẻ)</option>
+            </select>
+            
+            <input type="hidden" id="temp-bill-total" value="0">
+            <input type="hidden" id="manual-discount" value="0"> <input type="hidden" id="base-total-without-manual" value="0"> </div>
+
+        <button onclick="app.confirmPayment()" class="w-full bg-emerald-600 text-white py-5 rounded-2xl font-black uppercase shadow-xl hover:bg-emerald-700 transition-all active:scale-95">Xác nhận thanh toán</button>
+        <button onclick="ui.closeModal('checkout')" class="w-full mt-4 text-[10px] font-black uppercase text-slate-300 tracking-widest">Quay lại</button>
+    </div>
+</div>
+
+<div id="modal-pos-checkout" class="fixed inset-0 bg-black/80 z-[9999] hidden items-center justify-center p-4 backdrop-blur-sm">
+    <div class="bg-white rounded-[2.5rem] w-full max-w-md shadow-2xl overflow-hidden border border-slate-100">
+        <div class="p-6 bg-slate-900 text-white text-center">
+            <h3 class="font-black uppercase italic tracking-widest text-blue-400">Xác nhận thanh toán</h3>
+            <p id="pos-display-name" class="text-[10px] font-bold opacity-60 mt-1 uppercase tracking-tighter"></p>
+        </div>
+
+        <div class="p-8">
+            <div class="space-y-3 mb-6 bg-slate-50 p-5 rounded-[2rem] border border-slate-100">
+                <div class="flex justify-between items-center text-slate-500">
+                    <span class="text-[10px] font-black uppercase">Tổng tiền hàng:</span>
+                    <span id="pos-calc-subtotal" class="font-bold text-sm">0đ</span>
+                </div>
+
+                <div class="flex justify-between items-center text-emerald-600">
+                    <div class="flex flex-col">
+                        <span class="text-[10px] font-black uppercase">Giảm giá hạng khách:</span>
+                        <span id="pos-rank-name" class="text-[8px] italic opacity-70">Hạng: Đồng</span>
+                    </div>
+                    <div class="flex items-center gap-1 font-black">
+                        <span id="pos-rank-discount-percent">0</span>%
+                    </div>
+                </div>
+
+                <div class="flex justify-between items-center">
+                    <span class="text-[10px] font-black text-slate-400 uppercase">Giảm tiền mặt (đ):</span>
+                    <input type="number" id="pos-manual-discount" oninput="app.recalculatePosFinal()"
+                           class="w-28 bg-white border border-slate-200 rounded-xl px-3 py-1.5 text-right font-black text-rose-600 outline-none text-xs focus:ring-2 focus:ring-rose-100" value="0">
+                </div>
+
+                <div class="flex justify-between items-center pt-3 border-t border-slate-200">
+                    <span class="text-[11px] font-black text-slate-800 uppercase">Cần thanh toán:</span>
+                    <span id="pos-display-total" class="text-2xl font-[900] text-blue-600">0đ</span>
+                </div>
+            </div>
+
+            <div id="pos-cash-area" class="space-y-3 mb-6">
+                <div class="flex justify-between items-center">
+                    <span class="text-[10px] font-black text-slate-400 uppercase">Tiền khách đưa:</span>
+                    <input type="number" id="pos-cash-received" oninput="app.recalculatePosFinal()"
+                           class="w-32 bg-slate-100 border-none rounded-xl px-4 py-3 text-right font-black text-slate-800 outline-none text-sm focus:ring-2 focus:ring-blue-400" placeholder="0">
+                </div>
+                <div class="flex justify-between items-center px-2">
+                    <span class="text-[10px] font-black text-slate-400 uppercase">Tiền thối lại:</span>
+                    <span id="pos-cash-change" class="text-lg font-black text-orange-600">0đ</span>
+                </div>
+            </div>
+
+            <div class="space-y-4">
+                <select id="pos-method-select" onchange="app.handlePosMethodChange()" 
+                        class="w-full bg-slate-100 rounded-2xl p-4 font-black outline-none border-2 border-transparent focus:border-blue-500 text-sm appearance-none cursor-pointer">
+                    <option value="Tiền mặt">💵 Tiền mặt</option>
+                    <option value="Chuyển khoản">🏦 Chuyển khoản</option>
+                    <option value="Ví hội viên">💳 Ví hội viên</option>
+                </select>
+
+                <div id="pos-wallet-view" class="hidden p-4 bg-blue-50 rounded-2xl border border-blue-100 animate-fade-in">
+                    <div class="flex justify-between items-center text-[9px] font-black text-blue-400 uppercase mb-1">
+                        <span>Số dư ví hiện tại</span>
+                        <i class="fa-solid fa-id-card"></i>
+                    </div>
+                    <span id="pos-wallet-balance" class="font-black text-blue-800 text-base">0đ</span>
+                </div>
+
+                <div class="grid grid-cols-2 gap-3 pt-2">
+                    <button type="button" onclick="document.getElementById('modal-pos-checkout').classList.add('hidden');" 
+                            class="py-4 bg-slate-100 text-slate-500 rounded-2xl font-black uppercase text-[10px] active:scale-95 transition-all">Quay lại</button>
+                    <button type="button" id="btn-pos-final" 
+                            class="py-4 bg-blue-600 text-white rounded-2xl font-black uppercase text-[10px] shadow-lg active:scale-95 transition-all">Xác nhận bán</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="modal-activity-log" class="modal">
+    <div class="bg-white rounded-[2.5rem] p-8 w-full max-w-4xl shadow-2xl">
+        <div class="flex justify-between items-center mb-6">
+            <h2 class="font-black text-2xl uppercase italic text-rose-600">Nhật ký hoạt động</h2>
+            <button onclick="ui.closeModal('activity-log')" class="text-slate-400 hover:text-slate-600">
+                <i class="fa-solid fa-xmark text-xl"></i>
+            </button>
+        </div>
+
+        <div class="overflow-x-auto bg-slate-50 rounded-2xl p-4 border border-slate-100">
+            <table class="w-full text-left border-collapse">
+                <thead>
+                    <tr class="text-[10px] font-black uppercase text-slate-400 border-b-2 border-slate-200">
+                        <th class="pb-3 px-2">Thời gian</th>
+                        <th class="pb-3">Thao tác</th>
+                        <th class="pb-3">Chi tiết</th>
+                        <th class="pb-3">Nhân viên</th>
+                    </tr>
+                </thead>
+                <tbody id="log-table-body" class="text-xs">
+                    </tbody>
+            </table>
+        </div>
+        
+        <div class="mt-6 flex justify-end">
+            <button onclick="ui.closeModal('activity-log')" class="bg-slate-900 text-white px-8 py-3 rounded-xl font-black uppercase text-[10px] shadow-lg">Đóng lại</button>
+        </div>
+    </div>
+</div>
+
+<div id="modal-quick-add-cust" class="modal">
+    <div class="bg-white rounded-[2.5rem] p-8 w-full max-w-sm shadow-2xl border-t-[10px] border-blue-500">
+        <h2 class="font-black text-xl uppercase italic mb-6 text-slate-800">Thông tin khách mới</h2>
+        
+        <div class="space-y-4 mb-6">
+            <div>
+                <label class="text-[10px] font-black uppercase text-slate-400 pl-2">Số điện thoại</label>
+                <input id="quick-cust-phone" type="text" class="w-full bg-slate-100 rounded-2xl p-4 font-black outline-none border-2 border-transparent focus:border-blue-500">
+            </div>
+            <div>
+                <label class="text-[10px] font-black uppercase text-slate-400 pl-2">Tên khách hàng</label>
+                <input id="quick-cust-name" type="text" class="w-full bg-slate-100 rounded-2xl p-4 font-black outline-none border-2 border-transparent focus:border-blue-500" placeholder="Nhập tên khách...">
+            </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+            <button onclick="app.processQuickAddCust()" class="bg-blue-600 text-white py-4 rounded-2xl font-black uppercase shadow-lg hover:bg-blue-700 transition-all">Lưu & Chọn</button>
+            <button onclick="ui.closeModal('quick-add-cust')" class="bg-slate-100 py-4 rounded-2xl font-bold text-slate-400">Hủy</button>
+        </div>
+    </div>
+</div>
+
+
+    <div id="modal-booking" class="modal">
+    <div class="bg-white rounded-[2.5rem] p-8 w-full max-w-lg shadow-2xl relative max-h-[95vh] overflow-y-auto border border-slate-100">
+        
+        <div class="flex justify-between items-start mb-6">
+            <div>
+                <h2 class="font-black text-2xl uppercase italic text-blue-600 flex items-center gap-2">
+                    <i class="fa-solid fa-calendar-plus"></i> Đặt lịch mới
+                </h2>
+                <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1 ml-8">Hệ thống quản lý đặt sân Pro</p>
+            </div>
+            <button onclick="ui.closeModal('booking')" class="text-slate-300 hover:text-rose-500 transition-colors">
+                <i class="fa-solid fa-circle-xmark text-2xl"></i>
+            </button>
+        </div>
+        
+        <div class="space-y-4">
+            <input type="hidden" id="b-cust-id">
+            
+            <div class="grid grid-cols-2 gap-4">
+                <div class="bg-slate-50 p-3 rounded-2xl border border-slate-100 focus-within:border-blue-500 transition-all">
+                    <label class="text-[10px] font-black uppercase text-slate-400 pl-1 mb-1 block">Ngày chơi</label>
+                    <input type="date" id="b-date" class="w-full bg-transparent font-bold outline-none text-slate-700 cursor-pointer">
+                </div>
+                <div class="bg-slate-50 p-3 rounded-2xl border border-slate-100 focus-within:border-blue-500 transition-all">
+                    <label class="text-[10px] font-black uppercase text-slate-400 pl-1 mb-1 block">Chọn sân</label>
+                    <select id="b-court-id" class="w-full bg-transparent font-bold outline-none text-slate-700 cursor-pointer appearance-none"></select>
+                </div>
+            </div>
+
+            <div class="relative group">
+                <label class="text-[10px] font-black uppercase text-slate-400 pl-3 mb-1 block italic">Tìm khách hàng (Tên hoặc SĐT)</label>
+                <div class="flex gap-2">
+                    <div class="relative flex-1">
+                        <i class="fa-solid fa-user-magnifying-glass absolute left-4 top-4 text-slate-300"></i>
+                        <input id="b-name" type="text" 
+                            oninput="app.suggestBookingCustomer(this.value)" 
+                            class="w-full bg-slate-50 border border-slate-100 rounded-2xl p-4 pl-11 font-black text-blue-800 outline-none focus:bg-white focus:border-blue-500 transition-all" 
+                            placeholder="Gõ tên hoặc SĐT để tìm...">
+                        
+                        <div id="booking-cust-suggestions" class="absolute z-[100] left-0 right-0 bg-white shadow-2xl rounded-2xl mt-1 hidden max-h-48 overflow-y-auto border border-slate-100 animate-fadeIn">
+                        </div>
+                    </div>
+                    
+                    <button id="btn-quick-save-cust" onclick="app.openQuickAddCust()" 
+                        class="hidden bg-emerald-50 text-emerald-600 px-4 rounded-2xl border border-emerald-100 hover:bg-emerald-600 hover:text-white transition-all shadow-sm">
+                        <i class="fa-solid fa-user-plus"></i>
+                    </button>
+                </div>
+            </div>
+
+            <div class="bg-slate-50 p-3 rounded-2xl border border-slate-100">
+                <label class="text-[10px] font-black uppercase text-slate-400 pl-1 mb-1 block italic">Số điện thoại xác nhận</label>
+                <input id="b-phone" type="text" class="w-full bg-transparent font-bold outline-none text-slate-600" placeholder="09xxxxxxxx">
+            </div>
+
+            <div class="p-4 bg-indigo-50/50 rounded-2xl border border-indigo-100">
+                <label class="flex items-center gap-2 font-black text-indigo-700 cursor-pointer text-[10px] uppercase">
+                    <input type="checkbox" id="b-repeat" class="w-4 h-4 rounded-md accent-indigo-600" onchange="document.getElementById('repeat-options').classList.toggle('hidden', !this.checked)">
+                    Đặt lịch cố định hàng tuần
+                </label>
+                <div id="repeat-options" class="hidden mt-3 space-y-3 pt-3 border-t border-indigo-100">
+                    <div class="flex justify-between gap-1">
+                        <label class="flex-1"><input type="checkbox" name="repeat-days" value="1" class="hidden peer"><div class="text-center p-2 rounded-xl border bg-white text-[9px] font-black peer-checked:bg-blue-600 peer-checked:text-white transition-all cursor-pointer">T2</div></label>
+                        <label class="flex-1"><input type="checkbox" name="repeat-days" value="2" class="hidden peer"><div class="text-center p-2 rounded-xl border bg-white text-[9px] font-black peer-checked:bg-blue-600 peer-checked:text-white transition-all cursor-pointer">T3</div></label>
+                        <label class="flex-1"><input type="checkbox" name="repeat-days" value="3" class="hidden peer"><div class="text-center p-2 rounded-xl border bg-white text-[9px] font-black peer-checked:bg-blue-600 peer-checked:text-white transition-all cursor-pointer">T4</div></label>
+                        <label class="flex-1"><input type="checkbox" name="repeat-days" value="4" class="hidden peer"><div class="text-center p-2 rounded-xl border bg-white text-[9px] font-black peer-checked:bg-blue-600 peer-checked:text-white transition-all cursor-pointer">T5</div></label>
+                        <label class="flex-1"><input type="checkbox" name="repeat-days" value="5" class="hidden peer"><div class="text-center p-2 rounded-xl border bg-white text-[9px] font-black peer-checked:bg-blue-600 peer-checked:text-white transition-all cursor-pointer">T6</div></label>
+                        <label class="flex-1"><input type="checkbox" name="repeat-days" value="6" class="hidden peer"><div class="text-center p-2 rounded-xl border bg-white text-[9px] font-black peer-checked:bg-blue-600 peer-checked:text-white transition-all cursor-pointer">T7</div></label>
+                        <label class="flex-1"><input type="checkbox" name="repeat-days" value="0" class="hidden peer"><div class="text-center p-2 rounded-xl border bg-white text-[9px] font-black peer-checked:bg-blue-600 peer-checked:text-white transition-all cursor-pointer">CN</div></label>
+                    </div>
+                    <div class="flex items-center justify-between px-1">
+                        <span class="text-[9px] font-black text-slate-400 uppercase italic">Số tuần lặp:</span>
+                        <input type="number" id="b-repeat-weeks" value="4" min="1" max="52" class="w-14 p-1.5 rounded-xl border text-center font-black text-indigo-600 bg-white outline-none">
+                    </div>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-4">
+                <div class="bg-blue-50/50 p-3 rounded-2xl border border-blue-100">
+                    <label class="text-[9px] font-black uppercase text-blue-400 mb-1 block">Giờ vào sân</label>
+                    <input id="b-start" type="time" class="w-full bg-transparent font-black text-xl outline-none text-blue-700">
+                </div>
+                <div class="bg-rose-50/50 p-3 rounded-2xl border border-rose-100">
+                    <label class="text-[9px] font-black uppercase text-rose-400 mb-1 block">Giờ ra sân</label>
+                    <input id="b-end" type="time" class="w-full bg-transparent font-black text-xl outline-none text-rose-700">
+                </div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-4">
+                <div class="bg-orange-50/50 p-3 rounded-2xl border border-orange-100 relative">
+                    <label class="text-[9px] font-black uppercase text-orange-400 mb-1 block italic">Tiền cọc (VNĐ)</label>
+                    <input id="b-deposit" type="number" class="w-full bg-transparent font-black text-lg outline-none text-orange-600" placeholder="0">
+                </div>
+                <div class="bg-slate-50 p-3 rounded-2xl border border-slate-100">
+                    <label class="text-[9px] font-black uppercase text-slate-400 mb-1 block">Ghi chú nhanh</label>
+                    <input id="b-note" type="text" class="w-full bg-transparent font-bold text-xs outline-none text-slate-600" placeholder="Ghi chú...">
+                </div>
+            </div>
+
+            <div class="flex gap-3 pt-4">
+                <button onclick="ui.closeModal('booking')" class="flex-1 px-4 py-4 bg-slate-100 text-slate-400 rounded-2xl font-black uppercase text-[10px] tracking-widest hover:bg-slate-200 transition-all">Đóng</button>
+                <button onclick="app.saveBooking()" class="flex-[2] px-4 py-4 bg-blue-600 text-white rounded-2xl font-black shadow-xl shadow-indigo-100 hover:bg-blue-700 active:scale-95 transition-all uppercase italic">
+                    Xác nhận đặt lịch
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+    <div id="modal-court" class="modal">
+    <div class="bg-white rounded-[2.5rem] p-8 w-full max-w-md shadow-2xl">
+        <h2 class="font-black text-xl uppercase italic mb-6">Thông tin sân</h2>
+        <input type="hidden" id="court-id">
+        
+        <label class="text-[10px] font-black text-slate-400 pl-2">Tên sân</label>
+        <input id="c-name" type="text" class="w-full bg-slate-100 rounded-2xl p-4 font-bold mb-4 outline-none border-2 border-transparent focus:border-blue-500" placeholder="VD: Sân 01">
+        
+        <div class="flex justify-between items-center mb-1 pl-2">
+            <label class="text-[10px] font-black text-slate-400 uppercase">Loại sân</label>
+            <button onclick="ui.openModal('court-type')" class="text-[10px] font-bold text-blue-600 hover:underline">
+                <i class="fa-solid fa-gear mr-1"></i>Quản lý loại sân
+            </button>
+        </div>
+        <select id="c-type" class="w-full bg-slate-100 rounded-2xl p-4 font-bold mb-6 outline-none border-2 border-transparent focus:border-blue-500">
+            </select>
+
+        <button onclick="app.saveCourt()" class="w-full bg-blue-600 text-white py-4 rounded-2xl font-black uppercase shadow-lg">Lưu sân</button>
+        <button onclick="ui.closeModal('court')" class="w-full mt-4 text-[10px] font-bold uppercase text-slate-400">Hủy</button>
+    </div>
+</div>
+
+<div id="modal-court-type" class="modal">
+    <div class="bg-white rounded-[2.5rem] p-8 w-full max-w-sm shadow-2xl">
+        <h2 class="font-black text-lg uppercase italic mb-4 text-blue-600">Danh sách loại sân</h2>
+        <div id="court-type-list" class="space-y-2 mb-6 max-h-60 overflow-y-auto pr-2">
+            </div>
+        <div class="pt-4 border-t">
+            <input id="new-type-name" type="text" class="w-full bg-slate-100 rounded-xl p-3 text-sm font-bold mb-2 outline-none" placeholder="Tên loại mới (VD: Sân 5)">
+            <button onclick="app.addCourtType()" class="w-full bg-slate-900 text-white py-3 rounded-xl font-bold text-sm uppercase">Thêm loại mới</button>
+        </div>
+        <button onclick="ui.closeModal('court-type')" class="w-full mt-4 text-[10px] font-bold uppercase text-slate-400">Đóng</button>
+    </div>
+</div>
+    <div id="modal-service" class="modal">
+    <div class="bg-white rounded-[2.5rem] p-8 w-full max-w-md shadow-2xl relative border border-slate-100">
+        <button onclick="ui.closeModal('service')" class="absolute top-6 right-6 text-slate-300 hover:text-red-500 transition-colors">
+            <i class="fa-solid fa-circle-xmark text-2xl"></i>
+        </button>
+
+        <h2 class="font-black text-2xl uppercase italic mb-8 text-emerald-600 tracking-tighter">
+            <i class="fa-solid fa-box-open mr-2"></i>Thông tin dịch vụ
+        </h2>
+        
+        <input type="hidden" id="service-id">
+        
+        <div class="space-y-4">
+            <div>
+                <label class="text-[10px] font-black uppercase text-slate-400 ml-2 mb-1 block">Tên sản phẩm/Dịch vụ</label>
+                <input id="s-name" type="text" class="w-full bg-slate-50 rounded-2xl p-4 font-bold outline-none border-2 border-transparent focus:border-emerald-500 focus:bg-white transition-all shadow-sm" placeholder="Nhập tên món...">
+            </div>
+
+            <div>
+                <div class="flex justify-between items-center mb-1 px-2">
+                    <label class="text-[10px] font-black uppercase text-slate-400">Phân loại</label>
+                    <button type="button" onclick="ui.openModal('category-manager')" class="text-[9px] font-black text-blue-500 hover:text-blue-700 uppercase flex items-center gap-1">
+                        <i class="fa-solid fa-plus-circle"></i> Quản lý loại
+                    </button>
+                </div>
+                <select id="s-category" class="w-full bg-slate-50 rounded-2xl p-4 font-bold outline-none border-2 border-transparent focus:border-emerald-500 focus:bg-white transition-all shadow-sm appearance-none cursor-pointer">
+                    <option value="">-- Chọn phân loại --</option>
+                </select>
+            </div>
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="text-[10px] font-black uppercase text-slate-400 ml-2 mb-1 block">Giá bán (đ)</label>
+                    <input id="s-price" type="number" class="w-full bg-slate-50 rounded-2xl p-4 font-black text-emerald-600 outline-none border-2 border-transparent focus:border-emerald-500 focus:bg-white transition-all shadow-sm" placeholder="0">
+                </div>
+                <div>
+                    <label class="text-[10px] font-black uppercase text-slate-400 ml-2 mb-1 block">Tồn kho</label>
+                    <input id="s-stock" type="number" class="w-full bg-slate-50 rounded-2xl p-4 font-bold text-slate-600 outline-none border-2 border-transparent focus:border-emerald-500 focus:bg-white transition-all shadow-sm" placeholder="0">
+                </div>
+            </div>
+            <div>
+                <label class="text-[10px] font-black uppercase text-slate-400 ml-2 mb-1 block">Link hình ảnh (URL)</label>
+                <div class="relative">
+                    <input id="s-img" type="text" class="w-full bg-slate-50 rounded-2xl p-4 font-medium text-xs outline-none border-2 border-transparent focus:border-emerald-500 focus:bg-white transition-all shadow-sm pr-10" placeholder="https://example.com/image.jpg">
+                    <i class="fa-solid fa-image absolute right-4 top-4 text-slate-300"></i>
+                </div>
+            </div>
+            <div class="pt-4 space-y-3">
+                <button onclick="app.saveService()" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white py-4 rounded-2xl font-black uppercase shadow-lg shadow-emerald-200 active:scale-95 transition-all flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-check-circle"></i> Lưu dịch vụ
+                </button>
+                <button onclick="ui.closeModal('service')" class="w-full py-2 text-[10px] font-black uppercase text-slate-400 hover:text-slate-600 tracking-widest transition-colors">
+                    Hủy bỏ
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="modal-category-manager" class="modal">
+    <div class="bg-white rounded-[2.5rem] p-8 w-full max-w-md shadow-2xl relative">
+        <button onclick="ui.closeModal('category-manager')" class="absolute top-6 right-6 text-slate-400 hover:text-red-500">
+            <i class="fa-solid fa-xmark text-xl"></i>
+        </button>
+        
+        <h2 class="font-black text-xl uppercase italic mb-6 text-blue-600 border-b pb-2">Quản lý Loại Dịch Vụ</h2>
+        
+        <div class="flex gap-2 mb-6">
+            <input id="new-cat-name" type="text" 
+                   class="flex-1 bg-slate-100 rounded-xl p-3 font-bold outline-none border-2 border-transparent focus:border-blue-500" 
+                   placeholder="Tên loại mới (VD: Trái cây)...">
+            <button onclick="app.addCategory()" 
+                    class="bg-blue-600 text-white px-6 rounded-xl font-black uppercase text-[10px] hover:bg-blue-700 shadow-lg active:scale-95 transition-all">
+                Thêm
+            </button>
+        </div>
+
+        <div class="text-[10px] font-black uppercase text-slate-400 mb-2 px-2">Danh sách hiện có:</div>
+        <div id="cat-list-display" class="space-y-2 max-h-60 overflow-y-auto pr-2 custom-scrollbar">
+            </div>
+    </div>
+</div>
+
+<div id="tab-reports" class="tab-content hidden animate-fade-in p-4 lg:p-6 bg-[#f4f7fa]">
+    <div class="max-w-7xl mx-auto flex flex-col sm:flex-row justify-between items-center gap-4 mb-6">
+        <div>
+            <h2 class="text-xl font-[900] text-slate-800 tracking-tight uppercase italic">Analytics</h2>
+            <p class="text-[9px] font-bold text-slate-400 uppercase tracking-widest italic leading-none">Hệ thống báo cáo tinh gọn</p>
+        </div>
+        
+        <div class="flex items-center bg-white border border-slate-200 p-1 rounded-xl shadow-sm">
+            <div class="flex items-center px-3 gap-2 border-r border-slate-100 text-[10px] font-bold text-slate-600">
+                <input type="date" id="report-date-from" class="bg-transparent border-none p-1 focus:ring-0 w-24 uppercase">
+                <span class="text-slate-300">→</span>
+                <input type="date" id="report-date-to" class="bg-transparent border-none p-1 focus:ring-0 w-24 uppercase">
+            </div>
+            <button onclick="app.loadReports()" class="bg-slate-800 text-white px-4 py-1.5 rounded-lg font-black text-[9px] hover:bg-blue-600 transition-all active:scale-95">
+                ÁP DỤNG
+            </button>
+        </div>
+    </div>
+
+    <div class="max-w-7xl mx-auto grid grid-cols-12 gap-4">
+        <div class="col-span-12 grid grid-cols-2 md:grid-cols-4 gap-4" id="report-stats-overview"></div>
+
+        <div class="col-span-12 lg:col-span-8 space-y-4">
+            <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm relative">
+                <div class="flex justify-between items-center mb-6">
+                    <h3 class="text-[10px] font-black text-slate-500 uppercase tracking-widest">Lưu lượng đơn hàng / Giờ</h3>
+                    <i class="fa-solid fa-chart-bar text-slate-300 text-xs"></i>
+                </div>
+                <div id="peak-hour-chart" class="flex items-end gap-1.5 h-32 border-b border-slate-50 pb-1"></div>
+            </div>
+
+            <div class="bg-white p-5 rounded-[1.5rem] border border-slate-100 shadow-sm">
+    <div class="flex items-center justify-between mb-5">
+        <h3 class="text-[10px] font-[900] text-slate-800 uppercase tracking-[0.2em] italic">Nhật ký giao dịch</h3>
+        <span class="text-[8px] font-black bg-blue-50 text-blue-600 px-2 py-0.5 rounded-full uppercase">10 mới nhất</span>
+    </div>
+    <div class="overflow-hidden">
+        <table class="w-full">
+            <tbody id="recent-bills-list" class="divide-y divide-slate-50">
+                </tbody>
+        </table>
+    </div>
+</div>
+        </div>
+
+        <div class="col-span-12 lg:col-span-4">
+            <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+                <div class="flex items-center gap-2 mb-6 border-b border-slate-50 pb-4">
+                    <i class="fa-solid fa-fire-flame-curved text-orange-500 text-xs"></i>
+                    <h3 class="font-black uppercase text-[11px] text-slate-700 tracking-tighter leading-none">Top sản phẩm</h3>
+                </div>
+                <div id="top-products-list" class="space-y-2"></div>
+                
+                <div id="stock-summary-widget" class="mt-8 pt-4 border-t border-slate-50 space-y-2"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+    <div id="modal-stock" class="modal">
+    <div class="bg-white rounded-[2.5rem] p-8 w-full max-w-4xl shadow-2xl relative border border-slate-100">
+        <h2 class="font-[900] text-2xl uppercase italic mb-6 text-indigo-600 border-b pb-2 tracking-tight">Phiếu Nhập Kho Đa Năng</h2>
+        <input type="hidden" id="stock-edit-id">
+
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+            <div class="lg:col-span-4 space-y-5">
+                <div>
+                    <label class="text-[10px] font-black uppercase text-slate-400 ml-2">Nhà Cung Cấp</label>
+                    <select id="stk-supplier-id" class="w-full bg-slate-50 rounded-xl p-3 font-bold outline-none border border-slate-200 focus:border-indigo-500 mt-1"></select>
+                </div>
+
+                <div class="p-5 bg-indigo-50/50 rounded-[2rem] border border-indigo-100 shadow-inner">
+    <p class="text-[10px] font-[900] uppercase text-indigo-600 mb-4 flex items-center gap-2">
+        <i class="fa-solid fa-cart-plus"></i> Thêm món vào phiếu
+    </p>
+    <div class="space-y-3">
+        <div class="relative">
+            <input type="text" id="stk-product-search" 
+                   oninput="app.filterStockProduct(this.value)"
+                   onfocus="app.filterStockProduct(this.value)"
+                   placeholder="Gõ tên sản phẩm cần tìm..." 
+                   class="w-full bg-white rounded-xl p-3 text-sm font-bold border border-slate-200 outline-none focus:ring-2 focus:ring-indigo-400"
+                   autocomplete="off">
+            
+            <div id="stk-product-dropdown" class="hidden absolute left-0 right-0 top-full mt-1 bg-white border border-slate-200 shadow-2xl z-[100] rounded-xl max-h-60 overflow-y-auto">
+            </div>
+            
+            <input type="hidden" id="stk-product-id">
+        </div>
+
+        <div class="grid grid-cols-2 gap-2">
+            <input type="number" id="stk-qty" placeholder="SL" class="w-full bg-white rounded-xl p-3 text-sm font-bold border border-slate-200 outline-none">
+            <input type="number" id="stk-price" placeholder="Giá nhập" class="w-full bg-white rounded-xl p-3 text-sm font-bold border border-slate-200 outline-none">
+        </div>
+        <button onclick="app.addItemToStockList()" class="w-full bg-blue-600 text-white py-3 rounded-xl font-black uppercase text-[10px] shadow-lg shadow-indigo-100 hover:bg-indigo-700 active:scale-95 transition-all">
+            + Thêm vào bảng
+        </button>
+    </div>
+</div>
+
+                <div>
+                    <label class="text-[10px] font-black uppercase text-slate-400 ml-2">Tình trạng thanh toán</label>
+                    <select id="stk-status" onchange="ui.toggleStockPaymentFields()" class="w-full bg-slate-50 rounded-xl p-3 font-bold outline-none border border-slate-200 mt-1">
+                        <option value="Chưa thanh toán">❌ Ghi nợ NCC</option>
+                        <option value="Đã thanh toán">✅ Đã trả tiền</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="lg:col-span-8 flex flex-col">
+                <div class="flex-1 min-h-[300px] bg-slate-50 rounded-[2rem] border border-slate-200 overflow-hidden shadow-inner">
+                    <table class="w-full text-left border-collapse">
+                        <thead class="bg-slate-100/80 border-b border-slate-200">
+                            <tr class="text-[9px] font-black uppercase text-slate-500 tracking-widest">
+                                <th class="px-4 py-3">Sản phẩm</th>
+                                <th class="px-4 py-3 text-center w-20">SL</th>
+                                <th class="px-4 py-3 text-right">Đơn giá</th>
+                                <th class="px-4 py-3 text-right">Thành tiền</th>
+                                <th class="px-4 py-3 text-center w-12">#</th>
+                            </tr>
+                        </thead>
+                        <tbody id="stk-items-table-body" class="text-xs font-bold text-slate-700">
+                            </tbody>
+                    </table>
+                </div>
+
+                <div class="mt-4 bg-slate-900 rounded-[2rem] p-5 text-white shadow-2xl">
+                    <div class="flex justify-between items-center opacity-60 text-[9px] font-bold uppercase tracking-widest mb-2">
+                        <span>Tiền hàng: <span id="stk-subtotal">0đ</span></span>
+                        <span>Món: <span id="stk-item-count">0</span></span>
+                    </div>
+                    <div class="flex items-center gap-6 border-t border-white/10 pt-3">
+                        <div class="flex-1">
+                            <label class="text-[9px] font-bold uppercase text-indigo-400 ml-1">Thuế VAT (%)</label>
+                            <input type="number" id="stk-vat" oninput="app.calculateStockTotal()" class="w-full bg-transparent font-[900] text-2xl outline-none text-white" value="0">
+                        </div>
+                        <div class="text-right">
+                            <span class="text-[10px] font-black uppercase italic text-indigo-400">Cần thanh toán:</span>
+                            <div id="stk-final-total" class="text-3xl font-[900] text-indigo-400 leading-none mt-1" data-value="0">0đ</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="flex justify-end gap-3 mt-8 pt-4 border-t border-slate-50">
+            <button onclick="ui.closeModal('stock')" class="px-8 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest hover:text-rose-500 transition-colors">Hủy bỏ</button>
+            <button onclick="app.saveStock()" class="bg-blue-600 text-white px-10 py-4 rounded-2xl font-[900] uppercase text-xs shadow-xl shadow-indigo-100 hover:bg-indigo-700 active:scale-95 transition-all">Xác nhận nhập kho</button>
+        </div>
+    </div>
+</div>
+<div id="modal-supplier-manager" class="modal">
+    <div class="bg-white rounded-[2.5rem] p-8 w-full max-w-md shadow-2xl relative">
+        <button onclick="ui.closeModal('supplier-manager')" class="absolute top-6 right-6 text-slate-400 hover:text-red-500">
+            <i class="fa-solid fa-xmark text-xl"></i>
+        </button>
+        
+        <h2 class="font-black text-xl uppercase italic mb-6 text-indigo-600 border-b pb-2">Nhà Cung Cấp</h2>
+        
+        <div class="flex gap-2 mb-6">
+            <input id="new-supplier-name" type="text" 
+                   class="flex-1 bg-slate-100 rounded-xl p-3 font-bold outline-none border-2 border-transparent focus:border-indigo-500" 
+                   placeholder="Tên NCC mới...">
+            <button onclick="app.addSupplier()" 
+                    class="bg-blue-600 text-white px-6 rounded-xl font-black uppercase text-[10px] hover:bg-indigo-700 shadow-lg">
+                Thêm
+            </button>
+        </div>
+
+        <div class="text-[10px] font-black uppercase text-slate-400 mb-2 px-2">Danh sách đối tác:</div>
+        <div id="supplier-list-display" class="space-y-2 max-h-60 overflow-y-auto pr-2 custom-scrollbar">
+            </div>
+    </div>
+</div>
+    <div id="modal-member" class="modal">
+    <div class="bg-white rounded-[2.5rem] p-8 w-full max-w-md shadow-2xl relative border border-slate-100">
+        <button onclick="ui.closeModal('member')" class="absolute top-6 right-6 text-slate-300 hover:text-rose-500 transition-colors">
+            <i class="fa-solid fa-circle-xmark text-2xl"></i>
+        </button>
+
+        <h2 class="font-black text-2xl uppercase italic mb-8 text-blue-600 tracking-tighter flex items-center gap-2">
+            <i class="fa-solid fa-address-card"></i> Thông tin hội viên
+        </h2>
+
+        <input type="hidden" id="member-id">
+
+        <div class="space-y-5">
+            <div>
+                <label class="text-[10px] font-black uppercase text-slate-400 ml-2 mb-1 block">Tên khách hàng</label>
+                <div class="relative">
+                    <input id="m-name" type="text" 
+                           class="w-full bg-slate-50 border border-slate-100 rounded-2xl p-4 pl-11 font-bold outline-none focus:bg-white focus:border-blue-500 transition-all shadow-sm" 
+                           placeholder="Vd: Nguyễn Văn A">
+                    <i class="fa-solid fa-user absolute left-4 top-4 text-slate-300"></i>
+                </div>
+            </div>
+
+            <div>
+                <label class="text-[10px] font-black uppercase text-slate-400 ml-2 mb-1 block">Số điện thoại</label>
+                <div class="relative">
+                    <input id="m-phone" type="text" 
+                           class="w-full bg-slate-50 border border-slate-100 rounded-2xl p-4 pl-11 font-bold outline-none focus:bg-white focus:border-blue-500 transition-all shadow-sm" 
+                           placeholder="09xx.xxx.xxx">
+                    <i class="fa-solid fa-phone absolute left-4 top-4 text-slate-300"></i>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-4 hidden">
+                <div>
+                    <label class="text-[10px] font-black uppercase text-slate-400 ml-2 mb-1 block italic">Số dư ví (đ)</label>
+                    <div class="relative">
+                        <input id="m-wallet" type="number" 
+                               class="w-full bg-emerald-50 border border-emerald-100 rounded-2xl p-4 pl-10 font-black text-emerald-600 outline-none focus:bg-white focus:border-emerald-500 transition-all" 
+                               placeholder="0">
+                        <i class="fa-solid fa-wallet absolute left-4 top-4 text-emerald-300 text-xs"></i>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="text-[10px] font-black uppercase text-slate-400 ml-2 mb-1 block">Hạng thẻ</label>
+                    <select id="m-rank" class="w-full bg-slate-50 border border-slate-100 rounded-2xl p-4 font-bold outline-none appearance-none cursor-pointer focus:bg-white focus:border-blue-500 transition-all">
+                        <option value="Đồng">Đồng</option>
+                        <option value="Bạc">Bạc</option>
+                        <option value="Vàng">Vàng</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="pt-4 space-y-3">
+                <button onclick="app.saveMember()" 
+                        class="w-full bg-blue-600 hover:bg-blue-700 text-white py-4 rounded-2xl font-black uppercase shadow-lg shadow-blue-200 active:scale-95 transition-all flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-floppy-disk"></i> Lưu hội viên
+                </button>
+                <button onclick="ui.closeModal('member')" 
+                        class="w-full py-2 text-[10px] font-black uppercase text-slate-400 hover:text-slate-600 tracking-widest transition-colors">
+                    Hủy bỏ
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+    <div id="modal-staff" class="modal">
+        <div class="bg-white rounded-[2.5rem] p-8 w-full max-w-md shadow-2xl">
+            <h2 class="font-black text-xl uppercase italic mb-6 text-blue-600">Tài khoản nhân viên</h2>
+            <div class="space-y-4">
+                <input id="st-user" type="text" class="w-full bg-slate-100 rounded-2xl p-4 font-bold outline-none" placeholder="Tên đăng nhập">
+                <input id="st-pass" type="text" class="w-full bg-slate-100 rounded-2xl p-4 font-bold outline-none" placeholder="Mật khẩu">
+                <select id="st-role" class="w-full bg-slate-100 rounded-2xl p-4 font-bold outline-none">
+                    <option value="Staff">Nhân viên (Chỉ xem lịch/bill)</option>
+                    <option value="Admin">Admin (Toàn quyền)</option>
+                </select>
+                <button onclick="app.saveStaff()" class="w-full bg-blue-600 text-white py-4 rounded-2xl font-black uppercase shadow-lg">Lưu tài khoản</button>
+                <button onclick="ui.closeModal('staff')" class="w-full mt-2 text-[10px] font-bold uppercase text-slate-400">Hủy</button>
+            </div>
+        </div>
+    </div>
+    <div id="tab-suppliers" class="tab-content px-4"> <div class="max-w-[1400px] mx-auto space-y-6"> <div class="flex flex-col md:flex-row justify-between items-end gap-4">
+            <div>
+                <h2 class="text-2xl font-black text-slate-800 tracking-tight uppercase italic">Đối tác & Công nợ</h2>
+                <p class="text-slate-500 text-xs">Quản lý nhà cung cấp và lịch sử tài chính</p>
+            </div>
+            <div class="bg-emerald-50 border border-emerald-100 rounded-2xl px-8 py-4 text-right min-w-[240px] shadow-sm">
+                <span class="text-[10px] font-black uppercase text-emerald-600 tracking-widest">Tổng công nợ ncc</span>
+                <div id="total-supplier-debt" class="text-3xl font-[900] text-emerald-700 leading-none mt-1">0đ</div>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-[2rem] p-5 border border-slate-200 shadow-sm flex flex-wrap gap-4 items-center">
+            <div class="flex-1 min-w-[300px] relative">
+                <span class="absolute left-5 top-1/2 -translate-y-1/2 text-slate-400">
+                    <i class="fa-solid fa-magnifying-glass text-sm"></i>
+                </span>
+                <input type="text" id="filter-supplier-search" oninput="app.renderSupplierTable()" 
+                    placeholder="Tìm tên nhà cung cấp, SĐT, địa chỉ..." 
+                    class="w-full pl-12 pr-4 py-3 bg-slate-50 border-none rounded-2xl text-sm font-medium focus:ring-2 focus:ring-blue-500 transition-all outline-none">
+            </div>
+            
+            <div class="flex items-center gap-3">
+                <button onclick="ui.openModal('supplier')" class="bg-blue-600 text-white px-6 py-3 rounded-2xl text-xs font-black uppercase shadow-lg shadow-blue-100 hover:bg-blue-700 transition-all active:scale-95">
+                    + Thêm đối tác
+                </button>
+                <button onclick="app.renderSupplierTable()" class="bg-slate-800 text-white px-6 py-3 rounded-2xl text-xs font-black uppercase hover:bg-black transition-all flex items-center gap-2">
+                    <i class="fa-solid fa-rotate text-xs"></i> Làm mới
+                </button>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-[2rem] border border-slate-200 shadow-sm overflow-hidden">
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="bg-slate-50/50 border-b border-slate-100">
+                            <th class="p-6 text-[10px] font-black uppercase text-slate-400 tracking-[0.2em] pl-10">Nhà cung cấp</th>
+                            <th class="p-6 text-[10px] font-black uppercase text-slate-400 tracking-[0.2em] text-center">Liên hệ</th>
+                            <th class="p-6 text-[10px] font-black uppercase text-slate-400 tracking-[0.2em] text-right">Tổng nhập</th>
+                            <th class="p-6 text-[10px] font-black uppercase text-slate-400 tracking-[0.2em] text-right">Công nợ</th>
+                            <th class="p-6 text-[10px] font-black uppercase text-slate-400 tracking-[0.2em] text-right pr-10">Thao tác</th>
+                        </tr>
+                    </thead>
+                    <tbody id="supplier-table-body" class="divide-y divide-slate-50 text-sm font-bold text-slate-700">
+                        </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="modal-supplier" class="modal">
+    <div class="bg-white rounded-[2.5rem] p-8 w-full max-w-md shadow-2xl relative">
+        <h2 class="font-black text-xl uppercase italic mb-6 text-indigo-600">Thông tin đối tác</h2>
+        <input type="hidden" id="supplier-edit-id">
+        <div class="space-y-4">
+            <input type="text" id="sup-name" class="w-full bg-slate-100 rounded-2xl p-4 font-bold outline-none" placeholder="Tên nhà cung cấp (bắt buộc)">
+            <input type="text" id="sup-phone" class="w-full bg-slate-100 rounded-2xl p-4 font-bold outline-none" placeholder="Số điện thoại">
+            <textarea id="sup-address" class="w-full bg-slate-100 rounded-2xl p-4 font-bold outline-none h-24" placeholder="Địa chỉ / Ghi chú món cung cấp"></textarea>
+            
+            <button onclick="app.saveSupplier()" class="w-full bg-blue-600 text-white py-4 rounded-2xl font-black uppercase shadow-lg">Lưu thông tin</button>
+            <button onclick="ui.closeModal('supplier')" class="w-full mt-2 text-[10px] font-black text-slate-300 uppercase">Hủy bỏ</button>
+        </div>
+    </div>
+</div>
+<div id="tab-ledger" class="tab-content px-4">
+    <div class="max-w-[1400px] mx-auto space-y-6">
+        
+        <div class="flex flex-col md:flex-row justify-between items-end gap-4">
+            <div>
+                <h2 class="text-2xl font-black text-slate-800 tracking-tight uppercase italic">Sổ Quỹ Hệ Thống</h2>
+                <p class="text-slate-500 text-[10px] uppercase font-bold tracking-widest opacity-60 italic">Theo dõi dòng tiền thu chi realtime</p>
+            </div>
+            <div class="flex flex-wrap gap-3">
+                <div class="bg-white border border-slate-200 rounded-2xl px-6 py-4 text-right min-w-[160px] shadow-sm">
+                    <span class="text-[9px] font-black uppercase text-emerald-500 tracking-widest">Tổng thu (+)</span>
+                    <div id="ledger-total-income" class="text-2xl font-[900] text-slate-800 leading-none mt-1">0đ</div>
+                </div>
+                <div class="bg-white border border-slate-200 rounded-2xl px-6 py-4 text-right min-w-[160px] shadow-sm">
+                    <span class="text-[9px] font-black uppercase text-rose-500 tracking-widest">Tổng chi (-)</span>
+                    <div id="ledger-total-expense" class="text-2xl font-[900] text-slate-800 leading-none mt-1">0đ</div>
+                </div>
+                <div class="bg-slate-900 rounded-2xl px-6 py-4 text-right min-w-[180px] shadow-xl shadow-slate-200 text-white border-b-4 border-blue-500">
+                    <span id="ledger-balance-title" class="text-[9px] font-black uppercase opacity-60 tracking-widest">Tồn quỹ hiện tại</span>
+                    <div id="ledger-balance" class="text-2xl font-[900] leading-none mt-1 text-blue-400">0đ</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-[2rem] p-5 border border-slate-200 shadow-sm flex flex-col md:flex-row gap-4 items-center">
+            
+            <div class="flex items-center gap-2 bg-slate-50 p-1.5 rounded-2xl border border-slate-100 w-full md:w-auto">
+                <select id="ledger-filter-type" onchange="app.handleLedgerFilterChange()" class="bg-transparent border-none px-4 py-2 text-[10px] font-black uppercase outline-none text-blue-600 cursor-pointer">
+                    <option value="today">Hôm nay</option>
+                    <option value="yesterday">Hôm qua</option>
+                    <option value="this-week">Tuần này</option>
+                    <option value="this-month">Tháng này</option>
+                    <option value="custom">Tùy chọn ngày</option>
+                </select>
+                
+                <div class="h-4 w-[1px] bg-slate-200 mx-1"></div>
+
+                <select id="ledger-filter-method" onchange="app.renderLedger()" class="bg-transparent border-none px-4 py-2 text-[10px] font-black uppercase outline-none text-slate-600 cursor-pointer font-bold">
+                    <option value="all">💎 Tất cả nguồn tiền</option>
+                    <option value="Tiền mặt">💵 Tiền mặt</option>
+                    <option value="Chuyển khoản">🏦 Tài khoản (CK)</option>
+                </select>
+
+                <div id="ledger-custom-dates" class="hidden flex items-center gap-2 border-l pl-2 border-slate-200">
+                    <input type="date" id="ledger-date-from" onchange="app.renderLedger()" class="bg-transparent border-none text-[10px] font-bold uppercase outline-none">
+                    <span class="text-slate-300">→</span>
+                    <input type="date" id="ledger-date-to" onchange="app.renderLedger()" class="bg-transparent border-none text-[10px] font-bold uppercase outline-none">
+                </div>
+            </div>
+
+            <div class="flex-1"></div>
+
+            <div class="flex items-center gap-2 w-full md:w-auto">
+                <button onclick="app.openLedgerModal('Thu')" class="flex-1 md:flex-none bg-emerald-600 text-white px-6 py-3 rounded-xl text-[10px] font-black uppercase shadow-lg shadow-emerald-100 hover:bg-emerald-700 transition-all active:scale-95">
+                    <i class="fa-solid fa-plus-circle mr-1"></i> Thu tiền
+                </button>
+                <button onclick="app.openLedgerModal('Chi')" class="flex-1 md:flex-none bg-rose-600 text-white px-6 py-3 rounded-xl text-[10px] font-black uppercase shadow-lg shadow-rose-100 hover:bg-rose-700 transition-all active:scale-95">
+                    <i class="fa-solid fa-minus-circle mr-1"></i> Chi tiền
+                </button>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-[2rem] border border-slate-200 shadow-sm overflow-hidden">
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="bg-slate-50/50 border-b border-slate-100">
+                            <th class="p-5 text-[10px] font-black uppercase text-slate-400 tracking-widest pl-8">Thời gian</th>
+                            <th class="p-5 text-[10px] font-black uppercase text-slate-400 tracking-widest text-center">Loại phiếu</th>
+                            <th class="p-5 text-[10px] font-black uppercase text-slate-400 tracking-widest">Đối tượng</th>
+                            <th class="p-5 text-[10px] font-black uppercase text-slate-400 tracking-widest">Nội dung & Nguồn</th>
+                            <th class="p-5 text-[10px] font-black uppercase text-slate-400 tracking-widest text-right">Số tiền</th>
+                            <th class="p-5 text-[10px] font-black uppercase text-slate-400 tracking-widest text-right pr-10">Thao tác</th>
+                        </tr>
+                    </thead>
+                    <tbody id="ledger-table-body" class="divide-y divide-slate-50 text-sm font-bold text-slate-700">
+                        </tbody>
+                </table>
+            </div>
+        </div>
+
+    </div>
+</div>
+<div id="modal-ledger" class="modal">
+    <div class="bg-white rounded-[2.5rem] p-8 w-full max-w-md shadow-2xl relative border-t-[10px]" id="ledger-modal-border">
+        <h2 id="ledger-modal-title" class="font-black text-xl uppercase italic mb-6">Tạo phiếu</h2>
+        <input type="hidden" id="ledger-type">
+        
+        <div class="space-y-4">
+            <div>
+                <label class="text-[10px] font-black uppercase text-slate-400 ml-2">Đối tượng (Người nhận/nộp)</label>
+                <input id="ledger-person" type="text" class="w-full bg-slate-100 rounded-2xl p-4 font-bold outline-none border-2 border-transparent focus:border-blue-500" placeholder="Vd: Nguyễn Văn A">
+            </div>
+            <div>
+                <label class="text-[10px] font-black uppercase text-slate-400 ml-2">Số tiền (VNĐ)</label>
+                <input id="ledger-amount" type="number" class="w-full bg-slate-100 rounded-2xl p-4 font-[900] text-xl outline-none border-2 border-transparent focus:border-blue-500 text-blue-600" placeholder="0">
+            </div>
+            <div>
+                <label class="text-[10px] font-black uppercase text-slate-400 ml-2">Nội dung chi tiết</label>
+                <textarea id="ledger-note" class="w-full bg-slate-100 rounded-2xl p-4 font-bold outline-none h-24" placeholder="Vd: Thanh toán tiền điện tháng 03..."></textarea>
+            </div>
+            <div>
+    <label class="text-[10px] font-black uppercase text-slate-400 ml-2">Phương thức thanh toán</label>
+    <select id="ledger-method" class="w-full bg-slate-100 rounded-2xl p-4 font-bold outline-none border-2 border-transparent focus:border-blue-500 mt-1 appearance-none cursor-pointer">
+        <option value="Tiền mặt">💵 Tiền mặt</option>
+        <option value="Chuyển khoản">🏦 Chuyển khoản</option>
+    </select>
+</div>
+            <button onclick="app.saveLedger()" class="w-full bg-slate-900 text-white py-4 rounded-2xl font-black uppercase shadow-lg active:scale-95 transition-all mt-4">Xác nhận lưu phiếu</button>
+            <button onclick="ui.closeModal('ledger')" class="w-full mt-2 text-[10px] font-bold uppercase text-slate-400">Hủy bỏ</button>
+        </div>
+    </div>
+</div>
+    <script>
+        // 1. Khởi tạo Global ngay lập tức để tránh lỗi undefined
+        window.dataCache = { 
+        stocks: {}, 
+        bills: {}, 
+        members: {}, 
+        courts: {}, 
+        bookings: {}, 
+        services: {}, 
+        config: {}, 
+        staff: {},
+        courtTypes: {}, 
+        serviceCategories: {}, 
+        systemConfig: {},
+        suppliers: {} 
+    };
+    window.app = window.app || {};
+    window.app.posCart = [];
+    window.ui = window.ui || {};
+    window.auth = window.auth || {};
+    console.log("✅ Hệ thống bộ nhớ tạm đã sẵn sàng.");
+</script>
+
+<script type="module" src="js/firebase-config.js"></script>
+<script src="js/ui-controller.js"></script>
+<script src="js/app-logic.js"></script>
+
+<script type="module">
+    // Đợi kết nối Database thành công trước khi lắng nghe dữ liệu
+    const initSync = setInterval(() => {
+        if (window.db && window.ref && window.onValue) {
+            clearInterval(initSync);
+            console.log("✅ 2. Kết nối Database thành công. Bắt đầu đồng bộ Realtime...");
+            setupRealtime();
+        }
+    }, 200);
+
+    function setupRealtime() {
+        const { db, ref, onValue } = window;
+
+        window.auth = {
+            login: async () => {
+        const user = document.getElementById('login-user').value.trim();
+        const pass = document.getElementById('login-pass').value.trim();
+
+        if (!user || !pass) return alert("Vui lòng nhập tài khoản và mật khẩu!");
+
+        try {
+            const snapshot = await window.get(window.ref(window.db, 'staff/' + user));
+            const userData = snapshot.val();
+
+            if (userData && userData.Pass === pass) {
+                sessionStorage.setItem('pms_user', JSON.stringify(userData));
+                window.currentUser = userData;
+
+                if (window.ui && window.ui.applyPermissions) {
+                    window.ui.applyPermissions(userData.Role);
+                }
+
+                document.getElementById('login-screen').classList.add('hidden');
+                console.log("✅ Đăng nhập thành công:", userData.Role);
+            } else {
+                alert("❌ Tài khoản hoặc mật khẩu không đúng!");
+            }
+        } catch (e) {
+            console.error("Lỗi đăng nhập:", e);
+            alert("Lỗi hệ thống: " + e.message);
+        }
+    },
+
+    // THÊM HÀM ĐĂNG XUẤT VÀO ĐÂY
+    logout: () => {
+        if (confirm("🔔 Bạn có chắc chắn muốn đăng xuất không?")) {
+            // 1. Xóa dữ liệu phiên làm việc
+            sessionStorage.removeItem('pms_user');
+            
+            // 2. Tải lại trang để về trạng thái ban đầu (màn hình login sẽ tự hiện)
+            location.reload();
+        }
+    }
+};
+
+        // --- A. ĐỒNG BỘ CẤU HÌNH HỆ THỐNG (GIÁ SÂN, GIẢM GIÁ, HẠNG) ---
+        onValue(ref(db, 'config'), (snapshot) => {
+            const config = snapshot.val() || {};
+            window.dataCache.config = config;
+            console.log("⚙️ Đã cập nhật Cấu hình");
+
+            // Tự động điền dữ liệu vào các ô Input ở Tab Cấu hình
+            const fields = {
+                'conf-peak-start': config.peakStart || "17:00",
+                'conf-price-peak': config.pricePeak || 0,
+                'conf-weekend-up': config.weekendUp || 0,
+                'conf-m-copper': config.mCopper || 0,
+                'conf-m-silver': config.mSilver || 5,
+                'conf-m-gold': config.mGold || 10,
+                'conf-rank-silver': config.rankSilver || 5000000,
+                'conf-rank-gold': config.rankGold || 10000000
+            };
+
+            for (let id in fields) {
+                const el = document.getElementById(id);
+                if (el) el.value = fields[id];
+            }
+
+            // Vẽ lại bảng giá thuê theo loại sân
+            if (window.app && window.app.renderPriceConfig) window.app.renderPriceConfig();
+        });
+
+        // --- B. ĐỒNG BỘ SÂN & TIMELINE & LỊCH ĐẶT ---
+        onValue(ref(db, 'courts'), (s) => {
+            window.dataCache.courts = s.val() || {};
+            if (window.app.renderCourts) window.app.renderCourts();
+            if (window.app.renderCourtsTable) window.app.renderCourtsTable();
+            if (window.app.reloadTimeline) window.app.reloadTimeline();
+        });
+
+        onValue(ref(db, 'bookings'), (s) => {
+    // 1. Cập nhật dữ liệu vào bộ nhớ đệm (Cache)
+    window.dataCache.bookings = s.val() || {};
+    
+    // 2. Cập nhật lại Timeline (Code cũ của bạn)
+    if (window.app.reloadTimeline) window.app.reloadTimeline();
+
+    // 3. BỔ SUNG: Cập nhật lại Danh sách (Table) ngay lập tức
+    const listView = document.getElementById('booking-view-list');
+    
+    // Nếu tab Danh sách đang mở (không có class 'hidden') thì mới render
+    if (listView && !listView.classList.contains('hidden')) {
+        // Lấy giá trị filter hiện tại (Hôm nay, Ngày mai...) từ thẻ select
+        const filterSelect = document.querySelector('#booking-list-filter select');
+        const currentFilter = filterSelect ? filterSelect.value : 'today';
+        
+        // Gọi hàm vẽ lại bảng
+        if (window.app.renderBookingList) {
+            window.app.renderBookingList(currentFilter);
+        }
+    }
+});
+
+        onValue(ref(db, 'settings/courtTypes'), (s) => {
+            window.dataCache.courtTypes = s.val() || {};
+            if (window.app && window.app.renderCourtTypes) window.app.renderCourtTypes();
+        });
+
+
+    onValue(ref(db, 'customers'), (snapshot) => {
+    // Lưu dữ liệu vào bộ nhớ tạm
+    window.dataCache.customers = snapshot.val() || {};
+    console.log("Cập nhật danh sách khách hàng:", window.dataCache.customers);
+    
+    // Gọi hàm vẽ lại bảng ngay lập tức
+    if (window.app && window.app.renderAllCustomers) {
+        window.app.renderAllCustomers();
+    }
+});
+
+        // --- C. ĐỒNG BỘ DỊCH VỤ & PHÂN LOẠI & KHO ---
+        onValue(ref(db, 'services'), (s) => {
+            window.dataCache.services = s.val() || {};
+            if (window.app.renderPosProducts) window.app.renderPosProducts();
+            if (window.app.renderServicesTable) window.app.renderServicesTable();
+        });
+
+        onValue(ref(db, 'settings/serviceCategories'), (s) => {
+    const data = s.val();
+    console.log("Dữ liệu Categories thực tế:", data); // NHẤN F12 ĐỂ XEM DÒNG NÀY
+    window.dataCache.serviceCategories = data || {};
+    if (window.app && window.app.renderServiceCategories) {
+        window.app.renderServiceCategories();
+    }
+});
+
+    onValue(ref(db, 'systemConfig'), (snapshot) => {
+    const config = snapshot.val() || {};
+    window.dataCache.systemConfig = config;
+    console.log("⚙️ Đã cập nhật Cấu hình Hệ thống");
+
+    // Tự động điền dữ liệu vào các ô Input ở Tab Hệ thống
+    const fields = {
+        'sys-name': config.name || "",
+        'sys-address': config.address || "",
+        'sys-phone': config.phone || "",
+        'sys-footer': config.footer || "",
+        'sys-bank-id': config.bankId || "",
+        'sys-bank-no': config.bankNo || ""
+    };
+
+    for (let id in fields) {
+        const el = document.getElementById(id);
+        if (el) el.value = fields[id];
+    }
+
+    // Cập nhật bản xem trước hóa đơn
+    if (window.app && window.app.updatePrintPreview) {
+        window.app.updatePrintPreview();
+    }
+});
+
+// Tìm trong setupRealtime() của index.html
+onValue(ref(db, 'suppliers'), (snapshot) => {
+    window.dataCache.suppliers = snapshot.val() || {};
+    
+    // Ép nạp lại danh sách vào ô Select của Modal Nhập kho
+    if (window.app && window.app.renderSuppliers) {
+        window.app.renderSuppliers();
+    }
+    
+    // Vẽ lại bảng ở Tab Nhà cung cấp nếu đang mở
+    if (window.app && window.app.renderSupplierTable) {
+        window.app.renderSupplierTable();
+    }
+});
+
+        // --- D. ĐỒNG BỘ HỘI VIÊN ---
+        onValue(ref(db, 'members'), (s) => {
+            window.dataCache.members = s.val() || {};
+            console.log("👥 Đã đồng bộ Hội viên");
+            if (window.app.renderMembersTable) window.app.renderMembersTable();
+            if (window.ui.toggleBookingType) window.ui.toggleBookingType();
+        });
+
+        // --- E. ĐỒNG BỘ HÓA ĐƠN & BÁO CÁO ---
+        onValue(ref(db, 'bills'), (s) => {
+    window.dataCache.bills = s.val() || {};
+    
+    // 1. Vẽ lại tab Hóa đơn (đã có)
+    if (window.app.renderBills) window.app.renderBills();
+    
+    // 2. TỰ ĐỘNG VẼ LẠI DANH BẠ KHÁCH HÀNG (MỚI THÊM)
+    if (window.app.renderAllCustomers) {
+        window.app.renderAllCustomers();
+    }
+    
+    // 3. Tự động cập nhật báo cáo nếu đang ở tab báo cáo (đã có)
+    const reportTab = document.getElementById('tab-reports');
+    if (reportTab && reportTab.classList.contains('active') && window.app.loadReports) {
+        window.app.loadReports();
+    }
+});
+
+        onValue(ref(db, 'staff'), (snapshot) => {
+    window.dataCache.staff = snapshot.val() || {};
+    console.log("👥 Cập nhật danh sách nhân viên");
+    if (window.app && window.app.renderStaffTable) {
+        window.app.renderStaffTable();
+    }
+});
+
+        // Thêm vào setupRealtime()
+        onValue(ref(db, 'stocks'), (snapshot) => {
+            window.dataCache.stocks = snapshot.val() || {};
+        // Nếu đang ở tab nhập kho thì vẽ lại
+        if (window.app && window.app.renderStockTable) {
+        window.app.renderStockTable();
+            }
+        });
+        onValue(ref(db, 'ledger'), (snapshot) => {
+    window.dataCache.ledger = snapshot.val() || {};
+    console.log("💰 Đã cập nhật Sổ quỹ");
+    if (window.app && window.app.renderLedger) {
+        window.app.renderLedger();
+    }
+});
+    }
+</script>
+
+    
+</body>
+</html>
