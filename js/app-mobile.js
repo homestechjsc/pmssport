@@ -77,6 +77,57 @@ const appMobile = {
             }).join('');
         }
     },
+    // HÀM MỚI 1: Gợi ý hội viên khi gõ
+    suggestMember: (val) => {
+        const suggestionsBox = document.getElementById('mb-member-suggestions');
+        const phoneInput = document.getElementById('mb-phone');
+        const memberIdInput = document.getElementById('mb-member-id');
+        
+        if (!val || val.length < 1) {
+            suggestionsBox.classList.add('hidden');
+            memberIdInput.value = "";
+            return;
+        }
+
+        const members = Object.entries(window.dataCache.members || {});
+        const search = val.toLowerCase();
+        
+        // Lọc theo tên hoặc số điện thoại
+        const filtered = members.filter(([id, m]) => 
+            (m.Ten_HV || "").toLowerCase().includes(search) || 
+            (m.SDT || "").includes(search)
+        ).slice(0, 5); // Lấy tối đa 5 gợi ý cho gọn màn hình mobile
+
+        if (filtered.length > 0) {
+            suggestionsBox.innerHTML = filtered.map(([id, m]) => `
+                <div onclick="appMobile.selectMember('${id}', '${m.Ten_HV}', '${m.SDT}')" 
+                     class="p-4 border-b border-slate-50 active:bg-blue-50 flex justify-between items-center">
+                    <div>
+                        <p class="font-black text-slate-800 text-xs uppercase">${m.Ten_HV}</p>
+                        <p class="text-[10px] text-slate-400 font-bold">${m.SDT || 'Không có SĐT'}</p>
+                    </div>
+                    <span class="bg-blue-100 text-blue-600 text-[8px] font-black px-2 py-1 rounded-lg uppercase">Hội viên</span>
+                </div>
+            `).join('');
+            suggestionsBox.classList.remove('hidden');
+        } else {
+            suggestionsBox.classList.add('hidden');
+            memberIdInput.value = "";
+        }
+    },
+    // HÀM MỚI 2: Khi nhấn chọn một hội viên từ danh sách
+    selectMember: (id, name, phone) => {
+        document.getElementById('mb-name').value = name;
+        document.getElementById('mb-phone').value = phone || "";
+        document.getElementById('mb-member-id').value = id;
+        document.getElementById('mb-member-suggestions').classList.add('hidden');
+        
+        // Hiệu ứng đổi màu để biết đã chọn đúng hội viên
+        const nameInput = document.getElementById('mb-name');
+        nameInput.classList.add('text-emerald-600');
+        setTimeout(() => nameInput.classList.remove('text-emerald-600'), 1000);
+    },
+
 
     // 2. LOGIC CHI TIẾT CÁC BÁO CÁO
     viewReportDetail: (type) => {
@@ -560,6 +611,11 @@ const appMobile = {
         document.getElementById('mb-date').value = document.getElementById('view-date-mobile').value;
         modal.classList.remove('hidden');
         setTimeout(() => sheet.style.transform = "translateY(0)", 10);
+        // Bổ sung các dòng reset này:
+        document.getElementById('mb-name').value = "";
+        document.getElementById('mb-phone').value = "";
+        document.getElementById('mb-member-id').value = "";
+        document.getElementById('mb-member-suggestions').classList.add('hidden');
     },
 
     closeBookingModal: () => {
@@ -570,24 +626,84 @@ const appMobile = {
     },
 
     saveBooking: async () => {
-        const data = {
-            Court_ID: document.getElementById('mb-court-id').value,
-            Ngay: document.getElementById('mb-date').value,
-            Bat_Dau: document.getElementById('mb-start').value,
-            Ket_Thuc: document.getElementById('mb-end').value,
-            Ten_Khach: document.getElementById('mb-name').value.trim(),
-            SDT: document.getElementById('mb-phone').value.trim(),
-            Tien_Coc: Number(document.getElementById('mb-deposit').value || 0),
-            Trang_Thai: "Chưa nhận sân",
-            Thoi_Gian_Tao: new Date().toLocaleString('vi-VN')
-        };
-        if (!data.Court_ID || !data.Ten_Khach || !data.Bat_Dau) return alert("⚠️ Thiếu thông tin!");
-        try {
-            await window.set(window.ref(window.db, `bookings/BK-MB-${Date.now()}`), data);
-            alert("✅ Đã đặt lịch!");
-            appMobile.closeBookingModal();
-        } catch (e) { alert("Lỗi: " + e.message); }
+    const courtId = document.getElementById('mb-court-id').value;
+    const name = document.getElementById('mb-name').value.trim();
+    const phone = document.getElementById('mb-phone').value.trim();
+    const date = document.getElementById('mb-date').value;
+    const start = document.getElementById('mb-start').value;
+    const end = document.getElementById('mb-end').value;
+    const deposit = Number(document.getElementById('mb-deposit').value || 0);
+    const isRepeat = document.getElementById('mb-repeat').checked;
+
+    if (!courtId || !name || !start || !end || !date) return alert("⚠️ Vui lòng nhập đủ thông tin bắt buộc!");
+
+    try {
+        let bookingsToSave = [];
+        const baseData = {
+    Court_ID: courtId,
+    Bat_Dau: start,
+    Ket_Thuc: end,
+    Ten_Khach: name,
+    SDT: phone,
+    Member_ID: document.getElementById('mb-member-id').value || null, // THÊM DÒNG NÀY
+    Tien_Coc: isRepeat ? 0 : deposit,
+    Trang_Thai: "Chưa nhận sân",
+    Thoi_Gian_Tao: new Date().toLocaleString('vi-VN')
+};
+
+        if (isRepeat) {
+            const repeatWeeks = parseInt(document.getElementById('mb-repeat-weeks').value) || 1;
+            const selectedDays = Array.from(document.querySelectorAll('input[name="mb-repeat-days"]:checked')).map(el => parseInt(el.value));
+
+            if (selectedDays.length === 0) return alert("⚠️ Vui lòng chọn ít nhất một thứ trong tuần!");
+
+            let startDate = new Date(date);
+            for (let i = 0; i < repeatWeeks * 7; i++) {
+                let current = new Date(startDate);
+                current.setDate(startDate.getDate() + i);
+                
+                if (selectedDays.includes(current.getDay())) {
+                    const dateStr = current.toISOString().split('T')[0];
+                    bookingsToSave.push({
+                        ...baseData,
+                        Ngay: dateStr,
+                        Id: 'BK-FIX-' + Date.now() + '-' + i
+                    });
+                }
+            }
+        } else {
+            bookingsToSave.push({
+                ...baseData,
+                Ngay: date,
+                Id: 'BK-MB-' + Date.now()
+            });
+        }
+
+        // Thực hiện lưu lên Firebase
+        const updates = {};
+        bookingsToSave.forEach(b => {
+            const bId = b.Id;
+            delete b.Id;
+            updates[`bookings/${bId}`] = b;
+        });
+
+        // Nếu có tiền cọc (lịch đơn), tạo bill cọc
+        if (!isRepeat && deposit > 0) {
+            const billId = 'BILL-DEP-' + Date.now();
+            updates[`bills/${billId}`] = {
+                Khach_Hang: name, Tong_Tien: deposit, PTTT: "Tiền mặt",
+                Noi_Dung: `Cọc sân (Mobile): ${courtId}`, Ngay_Thang: date,
+                Thoi_Gian: baseData.Thoi_Gian_Tao, Loai_HD: "Tiền cọc"
+            };
+        }
+
+        await window.update(window.ref(window.db), updates);
+        alert(`✅ Đã đặt thành công ${bookingsToSave.length} lịch!`);
+        appMobile.closeBookingModal();
+    } catch (e) { 
+        alert("Lỗi: " + e.message); 
     }
+},
 };
 
 appMobile.init();
