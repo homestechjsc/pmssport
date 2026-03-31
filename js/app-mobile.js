@@ -22,10 +22,12 @@ const appMobile = {
             appMobile.renderDashboard(data);
             appMobile.renderCourts(data.courts || {});
             appMobile.renderCalendar();
-            // Tự động cập nhật nếu popup báo cáo đang mở
+
+            // THÊM ĐOẠN NÀY: Nếu đang mở popup Nhập kho thì cập nhật ngay lập tức
             const reportModal = document.getElementById('modal-report-detail');
-            if (reportModal && !reportModal.classList.contains('hidden')) {
-                // Có thể gọi lại hàm viewReportDetail để refresh dữ liệu tại đây nếu cần
+            const reportTitle = document.getElementById('report-popup-title')?.innerText;
+            if (reportModal && !reportModal.classList.contains('hidden') && reportTitle === "Lịch sử nhập kho") {
+                appMobile.viewReportDetail('inventory');
             }
         });
     },
@@ -134,18 +136,16 @@ const appMobile = {
     viewReportDetail: (type) => {
         let title = "";
         let html = "";
-        const today = new Date().toISOString().split('T')[0];
-        const todayFormatted = today.split('-').reverse().join('/');
+        
+        // 1. Khai báo tất cả các nguồn dữ liệu cần thiết
         const bills = Object.values(window.dataCache.bills || {});
-        const products = window.dataCache.products || {};
+        const inventory = Object.values(window.dataCache.inventory || window.dataCache.imports || {});
+        const ledger = Object.values(window.dataCache.ledger || {});
+        
+        const today = new Date().toISOString().split('T')[0]; // 2026-03-31
+        const todayFormatted = today.split('-').reverse().join('/'); // 31/03/2026
 
-        // Lọc các hóa đơn trong ngày hôm nay
-        const todayBills = bills.filter(b => {
-            const bDate = b.Ngay_Thang || (b.Thoi_Gian ? b.Thoi_Gian.split(' ')[0] : "");
-            return bDate === todayFormatted || bDate === today;
-        });
-
-        switch(type) {
+        switch (type) {
             case 'daily':
                 title = "Báo cáo cuối ngày";
                 // Lấy ngày đang chọn trong popup (nếu có), nếu không mặc định là hôm nay
@@ -217,333 +217,357 @@ const appMobile = {
                     </div>`;
                 break;
 
-            case 'sales':
+            case 'sales': {
                 title = "Báo cáo bán hàng";
                 
-                // 1. Lấy giá trị bộ lọc (Mặc định là 'today' nếu lần đầu mở)
                 const filterType = document.getElementById('report-sales-filter')?.value || 'today';
-                const customFrom = document.getElementById('sales-from')?.value;
-                const customTo = document.getElementById('sales-to')?.value;
+                const fromDate = document.getElementById('sales-from')?.value;
+                const toDate = document.getElementById('sales-to')?.value;
 
+                // 1. LOGIC LẤY THỜI GIAN (Sao chép từ Báo cáo cuối ngày)
                 const now = new Date();
-                let startDate, endDate;
+                const toNum = (d) => parseInt(d.toISOString().split('T')[0].replace(/-/g, ''));
+                let startNum = 0, endNum = 99999999;
 
-                // 2. Logic xác định khoảng thời gian
-                if (filterType === 'today') {
-                    startDate = new Date(now.setHours(0,0,0,0));
-                    endDate = new Date(now.setHours(23,59,59,999));
-                } else if (filterType === 'yesterday') {
-                    const yesterday = new Date(now);
-                    yesterday.setDate(now.getDate() - 1);
-                    startDate = new Date(yesterday.setHours(0,0,0,0));
-                    endDate = new Date(yesterday.setHours(23,59,59,999));
-                } else if (filterType === 'week') {
-                    const first = now.getDate() - now.getDay() + 1; // Thứ 2
-                    startDate = new Date(new Date(now.setDate(first)).setHours(0,0,0,0));
-                    endDate = new Date();
-                } else if (filterType === 'month') {
-                    startDate = new Date(now.getFullYear(), now.getMonth(), 1);
-                    endDate = new Date();
-                } else if (filterType === 'custom') {
-                    startDate = customFrom ? new Date(customFrom) : new Date();
-                    endDate = customTo ? new Date(customTo) : new Date();
-                    endDate.setHours(23,59,59,999);
+                if (filterType === 'today') { 
+                    startNum = endNum = toNum(now); 
+                } else if (filterType === 'yesterday') { 
+                    const yest = new Date(); yest.setDate(now.getDate() - 1); 
+                    startNum = endNum = toNum(yest); 
+                } else if (filterType === 'this-week') { 
+                    const first = now.getDate() - now.getDay() + 1;
+                    startNum = toNum(new Date(now.setDate(first))); 
+                    endNum = 20991231; 
+                } else if (filterType === 'this-month') { 
+                    startNum = parseInt(now.toISOString().split('T')[0].substring(0, 7).replace('-', '') + '01'); 
+                    endNum = 20991231; 
+                } else if (filterType === 'custom') { 
+                    if (fromDate) startNum = parseInt(fromDate.replace(/-/g, '')); 
+                    if (toDate) endNum = parseInt(toDate.replace(/-/g, '')); 
                 }
 
-                const toNum = (d) => parseInt(d.toISOString().split('T')[0].replace(/-/g, ''));
-                const startNum = toNum(startDate);
-                const endNum = toNum(endDate);
+                // 2. LỌC VÀ TÍNH TOÁN DỰA TRÊN KHOẢNG START - END
+                const allBills = Object.values(window.dataCache.bills || {});
+                const productMap = {}; 
+                let totalRevenue = 0;
 
-                // 3. Lọc dữ liệu từ bills
-                const filteredSales = bills.filter(b => {
-                    const bDateStr = b.Ngay_Thang || (b.Thoi_Gian ? b.Thoi_Gian.split(' ')[0] : "");
-                    // Chuyển dd/mm/yyyy hoặc yyyy-mm-dd về số để so sánh
-                    const parts = bDateStr.includes('-') ? bDateStr.split('-') : bDateStr.split('/');
-                    const bNum = bDateStr.includes('-') ? parseInt(parts[0]+parts[1]+parts[2]) : parseInt(parts[2]+parts[1]+parts[0]);
-                    return bNum >= startNum && bNum <= endNum;
+                allBills.forEach(bill => {
+                    // Lấy ngày của hóa đơn và chuyển về số YYYYMMDD
+                    const rawDate = bill.Ngay_Thang || bill.Ngay || "";
+                    if (!rawDate) return;
+                    const billNum = parseInt(rawDate.replace(/-/g, '').substring(0, 8));
+
+                    if (billNum >= startNum && billNum <= endNum) {
+                        totalRevenue += Number(bill.Tong_Tien || 0);
+                        
+                        if (bill.Items && Array.isArray(bill.Items)) {
+                            bill.Items.forEach(item => {
+                                const name = item.Ten || "Dịch vụ";
+                                if (!productMap[name]) productMap[name] = { qty: 0, amount: 0 };
+                                productMap[name].qty += Number(item.SL || 0);
+                                productMap[name].amount += Number(item.SL || 0) * Number(item.Gia || 0);
+                            });
+                        }
+                    }
                 });
 
-                const totalSales = filteredSales.reduce((sum, b) => sum + (Number(b.Tong_Tien) || 0), 0);
+                const sortedData = Object.entries(productMap).sort((a, b) => b[1].amount - a[1].amount);
 
                 html = `
                     <div class="space-y-3 mb-6">
                         <select id="report-sales-filter" onchange="appMobile.viewReportDetail('sales')" 
-                                class="w-full p-4 bg-white rounded-2xl border border-slate-100 shadow-sm font-black text-blue-600 outline-none uppercase text-[11px]">
+                                class="w-full p-4 bg-white rounded-2xl border border-slate-100 shadow-sm font-black text-blue-600 outline-none uppercase text-[10px]">
                             <option value="today" ${filterType==='today'?'selected':''}>Hôm nay</option>
                             <option value="yesterday" ${filterType==='yesterday'?'selected':''}>Hôm qua</option>
-                            <option value="week" ${filterType==='week'?'selected':''}>Tuần này</option>
-                            <option value="month" ${filterType==='month'?'selected':''}>Tháng này</option>
+                            <option value="this-week" ${filterType==='this-week'?'selected':''}>Tuần này</option>
+                            <option value="this-month" ${filterType==='this-month'?'selected':''}>Tháng này</option>
                             <option value="custom" ${filterType==='custom'?'selected':''}>Tùy chọn ngày</option>
                         </select>
-
                         ${filterType === 'custom' ? `
                             <div class="grid grid-cols-2 gap-2 animate-fadeIn">
-                                <input type="date" id="sales-from" value="${customFrom || ''}" onchange="appMobile.viewReportDetail('sales')" class="p-3 bg-white border border-slate-100 rounded-xl text-xs font-bold">
-                                <input type="date" id="sales-to" value="${customTo || ''}" onchange="appMobile.viewReportDetail('sales')" class="p-3 bg-white border border-slate-100 rounded-xl text-xs font-bold">
+                                <input type="date" id="sales-from" value="${fromDate || ''}" onchange="appMobile.viewReportDetail('sales')" class="p-3 bg-white border border-slate-100 rounded-xl text-[10px] font-bold">
+                                <input type="date" id="sales-to" value="${toDate || ''}" onchange="appMobile.viewReportDetail('sales')" class="p-3 bg-white border border-slate-100 rounded-xl text-[10px] font-bold">
                             </div>
                         ` : ''}
                     </div>
 
-                    <div class="p-6 bg-slate-900 rounded-[2rem] text-white mb-6 shadow-xl flex justify-between items-center">
-                        <div>
-                            <p class="text-[10px] font-black uppercase opacity-50 italic">Doanh số bán hàng</p>
-                            <p class="text-2xl font-[900]">${totalSales.toLocaleString()}đ</p>
-                        </div>
-                        <div class="w-12 h-12 bg-white/10 rounded-2xl flex items-center justify-center text-xl">
-                            <i class="fa-solid fa-chart-line text-blue-400"></i>
-                        </div>
+                    <div class="bg-blue-600 p-6 rounded-[2rem] text-white mb-6 shadow-xl relative overflow-hidden">
+                        <p class="text-[10px] font-black uppercase opacity-60 tracking-widest">Tổng doanh thu bán hàng</p>
+                        <p class="text-3xl font-[900] mt-1 tracking-tighter">${totalRevenue.toLocaleString()}đ</p>
+                        <i class="fa-solid fa-chart-line absolute right-6 bottom-4 text-white/10 text-6xl"></i>
                     </div>
 
-                    <h3 class="text-[10px] font-black text-slate-400 uppercase mb-3 ml-2 italic">● Chi tiết đơn hàng (${filteredSales.length})</h3>
                     <div class="space-y-3">
-                        ${filteredSales.map(b => `
-                            <div class="bg-white p-4 rounded-2xl border border-slate-50 shadow-sm flex justify-between items-center active:bg-slate-50">
-                                <div>
-                                    <p class="font-black text-slate-800 text-[11px] uppercase truncate max-w-[150px]">${b.Khach_Hang || 'Khách lẻ'}</p>
-                                    <p class="text-[8px] text-slate-400 font-bold">${b.Thoi_Gian || ''}</p>
-                                </div>
-                                <div class="text-right">
-                                    <p class="font-black text-blue-600 text-sm">${Number(b.Tong_Tien).toLocaleString()}đ</p>
-                                    <span class="text-[7px] px-2 py-0.5 bg-slate-100 rounded-full font-black uppercase text-slate-400">${b.PTTT}</span>
-                                </div>
-                            </div>
-                        `).join('') || '<div class="py-10 text-center opacity-30 text-xs italic">Không tìm thấy dữ liệu phù hợp</div>'}
-                    </div>
-                `;
-                break;
-
-            case 'inventory':
-                title = "Báo cáo Nhập kho";
-                
-                // 1. Lấy bộ lọc thời gian (Tương tự báo cáo bán hàng)
-                const invFilter = document.getElementById('report-inv-filter')?.value || 'today';
-                const invFrom = document.getElementById('inv-from')?.value;
-                const invTo = document.getElementById('inv-to')?.value;
-
-                const d = new Date();
-                let sDate, eDate;
-
-                if (invFilter === 'today') {
-                    sDate = new Date(d.setHours(0,0,0,0));
-                    eDate = new Date(d.setHours(23,59,59,999));
-                } else if (invFilter === 'yesterday') {
-                    const yest = new Date(d); yest.setDate(d.getDate() - 1);
-                    sDate = new Date(yest.setHours(0,0,0,0));
-                    eDate = new Date(yest.setHours(23,59,59,999));
-                } else if (invFilter === 'week') {
-                    const first = d.getDate() - d.getDay() + 1;
-                    sDate = new Date(new Date(d.setDate(first)).setHours(0,0,0,0));
-                    eDate = new Date();
-                } else if (invFilter === 'month') {
-                    sDate = new Date(d.getFullYear(), d.getMonth(), 1);
-                    eDate = new Date();
-                } else if (invFilter === 'custom') {
-                    sDate = invFrom ? new Date(invFrom) : new Date();
-                    eDate = invTo ? new Date(invTo) : new Date();
-                    eDate.setHours(23,59,59,999);
-                }
-
-                const dateToVal = (dt) => parseInt(dt.toISOString().split('T')[0].replace(/-/g, ''));
-                const startVal = dateToVal(sDate);
-                const endVal = dateToVal(eDate);
-
-                // 2. Lọc dữ liệu từ nhánh 'import_logs' hoặc 'purchases' (Tùy tên bạn đặt trên Firebase)
-                // Giả định bạn lưu lịch sử nhập hàng ở nhánh 'import_logs'
-                const importLogs = Object.values(window.dataCache.import_logs || {});
-                const filteredImports = importLogs.filter(log => {
-                    const logDate = log.Ngay_Nhap || log.Ngay || "";
-                    const parts = logDate.includes('-') ? logDate.split('-') : logDate.split('/');
-                    const logNum = logDate.includes('-') ? parseInt(parts[0]+parts[1]+parts[2]) : parseInt(parts[2]+parts[1]+parts[0]);
-                    return logNum >= startVal && logNum <= endVal;
-                });
-
-                // 3. Tính toán các chỉ số tài chính nhập hàng
-                const totalImport = filteredImports.reduce((s, l) => s + (Number(l.Tong_Tien) || 0), 0);
-                const paidImport = filteredImports.reduce((s, l) => s + (Number(l.Da_Thanh_Toan) || 0), 0);
-                const debtImport = totalImport - paidImport;
-
-                html = `
-                    <div class="space-y-3 mb-6">
-                        <select id="report-inv-filter" onchange="appMobile.viewReportDetail('inventory')" 
-                                class="w-full p-4 bg-white rounded-2xl border border-slate-100 shadow-sm font-black text-emerald-600 outline-none uppercase text-[11px]">
-                            <option value="today" ${invFilter==='today'?'selected':''}>Hôm nay</option>
-                            <option value="yesterday" ${invFilter==='yesterday'?'selected':''}>Hôm qua</option>
-                            <option value="week" ${invFilter==='week'?'selected':''}>Tuần này</option>
-                            <option value="month" ${invFilter==='month'?'selected':''}>Tháng này</option>
-                            <option value="custom" ${invFilter==='custom'?'selected':''}>Tùy chọn ngày</option>
-                        </select>
-
-                        ${invFilter === 'custom' ? `
-                            <div class="grid grid-cols-2 gap-2 animate-fadeIn">
-                                <input type="date" id="inv-from" value="${invFrom || ''}" onchange="appMobile.viewReportDetail('inventory')" class="p-3 bg-white border border-slate-100 rounded-xl text-xs font-bold">
-                                <input type="date" id="inv-to" value="${invTo || ''}" onchange="appMobile.viewReportDetail('inventory')" class="p-3 bg-white border border-slate-100 rounded-xl text-xs font-bold">
-                            </div>
-                        ` : ''}
-                    </div>
-
-                    <div class="grid grid-cols-1 gap-3 mb-6">
-                        <div class="bg-emerald-600 p-5 rounded-[2rem] text-white shadow-xl shadow-emerald-100">
-                            <p class="text-[10px] font-black uppercase opacity-60">Tổng tiền nhập hàng</p>
-                            <p class="text-3xl font-[900]">${totalImport.toLocaleString()}đ</p>
-                        </div>
-                        <div class="grid grid-cols-2 gap-3">
-                            <div class="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm">
-                                <p class="text-[9px] font-black text-blue-500 uppercase">Đã thanh toán</p>
-                                <p class="text-sm font-black text-slate-800">${paidImport.toLocaleString()}đ</p>
-                            </div>
-                            <div class="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm">
-                                <p class="text-[9px] font-black text-rose-500 uppercase">Còn nợ (Công nợ)</p>
-                                <p class="text-sm font-black text-slate-800">${debtImport.toLocaleString()}đ</p>
-                            </div>
-                        </div>
-                    </div>
-
-                    <h3 class="text-[10px] font-black text-slate-400 uppercase mb-3 ml-2 italic">● Lịch sử nhập hàng (${filteredImports.length})</h3>
-                    <div class="space-y-3">
-                        ${filteredImports.map(log => `
+                        ${sortedData.map(([name, data]) => `
                             <div class="bg-white p-4 rounded-2xl border border-slate-50 shadow-sm flex justify-between items-center">
-                                <div>
-                                    <p class="font-black text-slate-800 text-[11px] uppercase">${log.Nha_Cung_Cap || 'NCC lẻ'}</p>
-                                    <p class="text-[8px] text-slate-400 font-bold italic">${log.Ngay_Nhap || ''}</p>
+                                <div class="flex-1 min-w-0 pr-4">
+                                    <p class="font-black text-slate-800 text-[11px] uppercase truncate">${name}</p>
+                                    <p class="text-[9px] text-slate-400 font-bold uppercase italic mt-0.5">Số lượng: ${data.qty}</p>
                                 </div>
                                 <div class="text-right">
-                                    <p class="font-black text-emerald-600 text-sm">${Number(log.Tong_Tien).toLocaleString()}đ</p>
-                                    <span class="text-[7px] px-2 py-0.5 ${log.Trang_Thai === 'Hết nợ' ? 'bg-emerald-50 text-emerald-500' : 'bg-rose-50 text-rose-500'} rounded-full font-black uppercase italic">
-                                        ${log.Trang_Thai || 'N/A'}
-                                    </span>
+                                    <p class="font-black text-slate-700 text-sm">${data.amount.toLocaleString()}đ</p>
                                 </div>
                             </div>
-                        `).join('') || '<div class="py-10 text-center opacity-30 text-xs italic">Không có dữ liệu nhập hàng</div>'}
+                        `).join('') || '<div class="py-20 text-center opacity-20 font-black uppercase text-[10px]">Không có dữ liệu</div>'}
                     </div>
                 `;
-                break;
-
-            case 'cash': { // Bắt đầu Block Scope để tránh báo đỏ
-                title = "Sổ quỹ hệ thống";
-                
-                // 1. Lấy giá trị bộ lọc thời gian
-                const cfType = document.getElementById('report-cash-filter')?.value || 'today';
-                const cfFrom = document.getElementById('cash-from')?.value;
-                const cfTo = document.getElementById('cash-to')?.value;
-
-                const dNow = new Date();
-                let sd, ed;
-
-                // Xác định khoảng ngày
-                if (cfType === 'today') {
-                    sd = new Date(dNow.setHours(0,0,0,0));
-                    ed = new Date(dNow.setHours(23,59,59,999));
-                } else if (cfType === 'yesterday') {
-                    const y = new Date(dNow); y.setDate(dNow.getDate() - 1);
-                    sd = new Date(y.setHours(0,0,0,0));
-                    ed = new Date(y.setHours(23,59,59,999));
-                } else if (cfType === 'week') {
-                    const first = dNow.getDate() - dNow.getDay() + 1;
-                    sd = new Date(new Date(dNow.setDate(first)).setHours(0,0,0,0));
-                    ed = new Date();
-                } else if (cfType === 'month') {
-                    sd = new Date(dNow.getFullYear(), dNow.getMonth(), 1);
-                    ed = new Date();
-                } else if (cfType === 'custom') {
-                    sd = cfFrom ? new Date(cfFrom) : new Date();
-                    ed = cfTo ? new Date(cfTo) : new Date();
-                    ed.setHours(23,59,59,999);
-                }
-
-                // Hàm chuyển date sang số YYYYMMDD để so sánh
-                const dateToVal = (dt) => parseInt(dt.toISOString().split('T')[0].replace(/-/g, ''));
-                const sVal = dateToVal(sd);
-                const eVal = dateToVal(ed);
-
-                // 2. Lọc dữ liệu từ Ledger (Đã bao gồm cả Thu tự động từ Bill)
-                const fullLedger = Object.values(window.dataCache.ledger || {});
-                const filteredLedger = fullLedger.filter(item => {
-                    if (!item.Ngay) return false;
-                    const itemNum = parseInt(item.Ngay.replace(/-/g, ''));
-                    return itemNum >= sVal && itemNum <= eVal;
-                }).sort((a, b) => b.Id.localeCompare(a.Id));
-
-                // 3. Tính toán 2 nguồn tiền: Tiền mặt & Chuyển khoản
-                let thuTM = 0, chiTM = 0, thuCK = 0, chiCK = 0;
-
-                filteredLedger.forEach(item => {
-                    const val = Number(item.So_Tien || 0);
-                    const pttt = item.PTTT || "Tiền mặt";
-                    if (item.Loai === 'Thu') {
-                        if (pttt === 'Tiền mặt') thuTM += val; else thuCK += val;
-                    } else {
-                        if (pttt === 'Tiền mặt') chiTM += val; else chiCK += val;
-                    }
-                });
-
-                const tonTM = thuTM - chiTM;
-                const tonCK = thuCK - chiCK;
-                const tongTon = tonTM + tonCK;
-
-                html = `
-                    <div class="space-y-3 mb-6">
-                        <select id="report-cash-filter" onchange="appMobile.viewReportDetail('cash')" 
-                                class="w-full p-4 bg-white rounded-2xl border border-slate-100 shadow-sm font-black text-blue-600 outline-none uppercase text-[11px]">
-                            <option value="today" ${cfType==='today'?'selected':''}>Hôm nay</option>
-                            <option value="yesterday" ${cfType==='yesterday'?'selected':''}>Hôm qua</option>
-                            <option value="week" ${cfType==='week'?'selected':''}>Tuần này</option>
-                            <option value="month" ${cfType==='month'?'selected':''}>Tháng này</option>
-                            <option value="custom" ${cfType==='custom'?'selected':''}>Tùy chọn ngày</option>
-                        </select>
-                        ${cfType === 'custom' ? `
-                            <div class="grid grid-cols-2 gap-2 animate-fadeIn">
-                                <input type="date" id="cash-from" value="${cfFrom || ''}" onchange="appMobile.viewReportDetail('cash')" class="p-3 bg-white border border-slate-100 rounded-xl text-xs font-bold">
-                                <input type="date" id="cash-to" value="${cfTo || ''}" onchange="appMobile.viewReportDetail('cash')" class="p-3 bg-white border border-slate-100 rounded-xl text-xs font-bold">
-                            </div>
-                        ` : ''}
-                    </div>
-
-                    <div class="bg-slate-900 p-6 rounded-[2.5rem] text-white mb-6 shadow-xl relative overflow-hidden">
-                        <div class="relative z-10">
-                            <p class="text-[10px] font-black uppercase opacity-50 italic">Tổng tồn quỹ (TM + CK)</p>
-                            <p class="text-3xl font-[900] text-blue-400 mt-1">${tongTon.toLocaleString()}đ</p>
-                        </div>
-                        <i class="fa-solid fa-vault absolute right-6 bottom-4 text-white/5 text-6xl"></i>
-                    </div>
-
-                    <div class="grid grid-cols-2 gap-3 mb-6">
-                        <div class="bg-emerald-50 p-4 rounded-2xl border border-emerald-100 shadow-sm">
-                            <p class="text-[9px] font-black text-emerald-500 uppercase mb-1">Tiền mặt tồn</p>
-                            <p class="text-sm font-[900] text-emerald-700">${tonTM.toLocaleString()}đ</p>
-                        </div>
-                        <div class="bg-blue-50 p-4 rounded-2xl border border-blue-100 shadow-sm">
-                            <p class="text-[9px] font-black text-blue-500 uppercase mb-1">Chuyển khoản tồn</p>
-                            <p class="text-sm font-[900] text-blue-700">${tonCK.toLocaleString()}đ</p>
-                        </div>
-                    </div>
-
-                    <h3 class="text-[10px] font-black text-slate-400 uppercase mb-3 ml-2 italic">● Nhật ký thu chi mới nhất</h3>
-                    <div class="space-y-3">
-                        ${filteredLedger.map(item => {
-                            const isThu = item.Loai === 'Thu';
-                            const isCash = (item.PTTT === 'Tiền mặt');
-                            return `
-                                <div class="bg-white p-4 rounded-2xl border border-slate-50 shadow-sm flex justify-between items-center">
-                                    <div class="flex-1 min-w-0">
-                                        <p class="font-black text-slate-800 text-[11px] uppercase truncate">${item.Doi_Tuong || 'N/A'}</p>
-                                        <p class="text-[8px] text-slate-400 font-bold italic truncate">
-                                            <i class="${isCash ? 'fa-solid fa-money-bill-1' : 'fa-solid fa-building-columns'} mr-1"></i>
-                                            ${item.Noi_Dung}
-                                        </p>
-                                    </div>
-                                    <div class="text-right ml-4">
-                                        <p class="font-[900] ${isThu ? 'text-emerald-500' : 'text-rose-500'} text-xs">
-                                            ${isThu ? '+' : '-'}${Number(item.So_Tien).toLocaleString()}
-                                        </p>
-                                        <p class="text-[7px] text-slate-300 font-bold uppercase tracking-tighter">${item.Thoi_Gian?.split(' ')[1] || ''}</p>
-                                    </div>
-                                </div>
-                            `;
-                        }).join('') || '<div class="py-10 text-center opacity-20 italic text-xs uppercase font-black">Trống</div>'}
-                    </div>
-                `;
-            } // Kết thúc Block Scope
+            }
             break;
+
+         case 'inventory': {
+    title = "Lịch sử nhập kho";
+    
+    // Lấy giá trị bộ lọc
+    const filterType = document.getElementById('report-inv-filter')?.value || 'today';
+    const fromDate = document.getElementById('inv-from')?.value;
+    const toDate = document.getElementById('inv-to')?.value;
+    const now = new Date();
+    
+    // Hàm chuẩn hóa ngày (Xử lý 31/3/2026 hoặc 2026-03-31)
+    const dateToNum = (dateStr) => {
+        if (!dateStr) return 0;
+        let clean = dateStr.toString().split(' ')[0].trim().replace(/\//g, '-');
+        let parts = clean.split('-');
+        if (parts.length !== 3) return 0;
+        let y, m, d;
+        if (parts[0].length === 4) { [y, m, d] = parts; } 
+        else { [d, m, y] = parts; }
+        return parseInt(y + m.padStart(2, '0') + d.padStart(2, '0'));
+    };
+
+    let startNum = 0, endNum = 99999999;
+    if (filterType === 'today') { startNum = endNum = dateToNum(now.toLocaleDateString('vi-VN')); }
+    else if (filterType === 'yesterday') { 
+        const yest = new Date(); yest.setDate(now.getDate() - 1); 
+        startNum = endNum = dateToNum(yest.toLocaleDateString('vi-VN')); 
+    } else if (filterType === 'this-month') { 
+        startNum = parseInt(now.getFullYear().toString() + (now.getMonth() + 1).toString().padStart(2, '0') + '01');
+        endNum = 20991231;
+    } else if (filterType === 'custom') { 
+        if (fromDate) startNum = dateToNum(fromDate); 
+        if (toDate) endNum = dateToNum(toDate); 
+    }
+
+    const dbSource = window.dataCache.stocks || {}; 
+    const importList = Object.values(dbSource);
+    
+    const filteredData = importList.filter(item => {
+        const itemNum = dateToNum(item.date);
+        return itemNum >= startNum && itemNum <= endNum;
+    }).sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0)); // Sắp xếp theo thời gian mới nhất
+
+    // --- TÍNH TOÁN THEO ĐÚNG CẤU TRÚC APP-LOGIC.JS ---
+    let totalImport = 0;
+    let paidAmount = 0;
+    let debtAmount = 0;
+
+    const cardsHtml = filteredData.map(item => {
+        // Lấy trường 'total' trực tiếp từ item (Vì app-logic lưu tổng ở ngoài phiếu)
+        const itemTotal = Number(item.total || 0);
+
+        totalImport += itemTotal;
+
+        const isPaid = (item.status === "Đã thanh toán");
+        if (isPaid) paidAmount += itemTotal;
+        else debtAmount += itemTotal;
+
+        // Lấy tên các sản phẩm để hiển thị preview
+        const productPreview = item.items ? item.items.map(p => p.name).join(', ') : (item.productName || 'Hàng hóa');
+
+        return `
+        <div class="bg-white p-4 rounded-2xl border border-slate-50 shadow-sm flex justify-between items-center mb-3">
+            <div class="flex-1 min-w-0 pr-4">
+                <p class="text-[8px] font-black text-blue-500 uppercase">${item.supplierName || 'NCC Lẻ'}</p>
+                <p class="font-black text-slate-800 text-[11px] uppercase truncate">${productPreview}</p>
+                <p class="text-[9px] text-slate-400 font-bold mt-0.5 italic">${item.date} ${item.time || ''}</p>
+            </div>
+            <div class="text-right">
+                <p class="font-black text-slate-700 text-sm">${itemTotal.toLocaleString()}đ</p>
+                <span class="inline-block px-2 py-0.5 rounded-lg text-[8px] font-black uppercase mt-1 ${isPaid ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'}">
+                    ${item.status || 'Chưa thanh toán'}
+                </span>
+            </div>
+        </div>`;
+    }).join('');
+
+    html = `
+        <div class="space-y-3 mb-6 px-1">
+            <select id="report-inv-filter" onchange="appMobile.viewReportDetail('inventory')" 
+                    class="w-full p-4 bg-white rounded-2xl border border-slate-100 shadow-sm font-black text-blue-600 outline-none uppercase text-[10px]">
+                <option value="today" ${filterType==='today'?'selected':''}>Hôm nay</option>
+                <option value="yesterday" ${filterType==='yesterday'?'selected':''}>Hôm qua</option>
+                <option value="this-month" ${filterType==='this-month'?'selected':''}>Tháng này</option>
+                <option value="custom" ${filterType==='custom'?'selected':''}>Tùy chọn ngày</option>
+            </select>
+            ${filterType === 'custom' ? `
+                <div class="grid grid-cols-2 gap-2 animate-fadeIn">
+                    <input type="date" id="inv-from" value="${fromDate || ''}" onchange="appMobile.viewReportDetail('inventory')" class="p-3 bg-white border border-slate-100 rounded-xl text-[10px] font-bold outline-none">
+                    <input type="date" id="inv-to" value="${toDate || ''}" onchange="appMobile.viewReportDetail('inventory')" class="p-3 bg-white border border-slate-100 rounded-xl text-[10px] font-bold outline-none">
+                </div>
+            ` : ''}
+        </div>
+
+        <div class="grid grid-cols-1 gap-3 mb-6 px-1">
+            <div class="bg-slate-900 p-5 rounded-[2.5rem] text-white shadow-xl relative overflow-hidden text-center">
+                <p class="text-[9px] font-black uppercase opacity-40 italic tracking-widest">Tổng vốn nhập hàng</p>
+                <p class="text-2xl font-[900] text-emerald-400 mt-1">${totalImport.toLocaleString()}đ</p>
+            </div>
+            <div class="flex gap-2">
+                <div class="flex-1 bg-emerald-500 p-4 rounded-[1.5rem] text-white shadow-lg text-center">
+                    <p class="text-[8px] font-black uppercase opacity-70">Đã thanh toán</p>
+                    <p class="text-sm font-[900]">${paidAmount.toLocaleString()}đ</p>
+                </div>
+                <div class="flex-1 bg-rose-500 p-4 rounded-[1.5rem] text-white shadow-lg text-center">
+                    <p class="text-[8px] font-black uppercase opacity-70">Còn nợ NCC</p>
+                    <p class="text-sm font-[900]">${debtAmount.toLocaleString()}đ</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="space-y-3 pb-10 px-1">
+            ${cardsHtml || '<div class="py-20 text-center opacity-20 font-black uppercase text-[10px] italic">Không có dữ liệu</div>'}
+        </div>
+    `;
+}
+break;
+
+           case 'cash': {
+    title = "Sổ quỹ hệ thống";
+    
+    // 1. Lấy giá trị bộ lọc từ giao diện
+    const cfType = document.getElementById('report-cash-filter')?.value || 'today';
+    const cfFrom = document.getElementById('cash-from')?.value;
+    const cfTo = document.getElementById('cash-to')?.value;
+
+    // 2. Hàm chuẩn hóa ngày (Chuyển mọi định dạng về số YYYYMMDD để so sánh)
+    const dateToNum = (dateStr) => {
+        if (!dateStr) return 0;
+        // Xử lý nếu dateStr là Object Date
+        if (dateStr instanceof Date) {
+            const y = dateStr.getFullYear();
+            const m = (dateStr.getMonth() + 1).toString().padStart(2, '0');
+            const d = dateStr.getDate().toString().padStart(2, '0');
+            return parseInt(`${y}${m}${d}`);
+        }
+        // Xử lý chuỗi (xóa giờ nếu có, thay / bằng -)
+        let clean = dateStr.toString().split(' ')[0].replace(/\//g, '-');
+        let parts = clean.split('-');
+        if (parts.length !== 3) return 0;
+        
+        let y, m, d;
+        if (parts[0].length === 4) { [y, m, d] = parts; } // YYYY-MM-DD
+        else { [d, m, y] = parts; } // DD-MM-YYYY
+        return parseInt(y + m.padStart(2, '0') + d.padStart(2, '0'));
+    };
+
+    const now = new Date();
+    let startNum = 0, endNum = 99999999;
+
+    // 3. Thiết lập khoảng chặn startNum - endNum
+    if (cfType === 'today') {
+        startNum = endNum = dateToNum(now);
+    } else if (cfType === 'yesterday') {
+        const yest = new Date(); yest.setDate(now.getDate() - 1);
+        startNum = endNum = dateToNum(yest);
+    } else if (cfType === 'week') {
+        const first = now.getDate() - (now.getDay() === 0 ? 6 : now.getDay() - 1);
+        startNum = dateToNum(new Date(now.setDate(first)));
+        endNum = 20991231;
+    } else if (cfType === 'month') {
+        startNum = parseInt(now.getFullYear().toString() + (now.getMonth() + 1).toString().padStart(2, '0') + '01');
+        endNum = 20991231;
+    } else if (cfType === 'custom') {
+        if (cfFrom) startNum = dateToNum(cfFrom);
+        if (cfTo) endNum = dateToNum(cfTo);
+    }
+
+    // 4. Truy xuất và Lọc dữ liệu từ Ledger
+    const fullLedger = Object.values(window.dataCache.ledger || {});
+    const filteredLedger = fullLedger.filter(item => {
+        const itemNum = dateToNum(item.Ngay || item.Thoi_Gian);
+        return itemNum >= startNum && itemNum <= endNum;
+    }).sort((a, b) => (b.Thoi_Gian || "").localeCompare(a.Thoi_Gian || ""));
+
+    // 5. Tính toán Thu/Chi/Tồn
+    let thuTM = 0, chiTM = 0, thuCK = 0, chiCK = 0;
+
+    filteredLedger.forEach(item => {
+        const val = Number(item.So_Tien || 0);
+        const pttt = item.PTTT || "Tiền mặt";
+        if (item.Loai === 'Thu') {
+            if (pttt === 'Tiền mặt') thuTM += val; else thuCK += val;
+        } else {
+            if (pttt === 'Tiền mặt') chiTM += val; else chiCK += val;
+        }
+    });
+
+    const tonTM = thuTM - chiTM;
+    const tonCK = thuCK - chiCK;
+    const tongTon = tonTM + tonCK;
+
+    // 6. Giao diện hiển thị
+    html = `
+        <div class="space-y-3 mb-6">
+            <select id="report-cash-filter" onchange="appMobile.viewReportDetail('cash')" 
+                    class="w-full p-4 bg-white rounded-2xl border border-slate-100 shadow-sm font-black text-blue-600 outline-none uppercase text-[11px]">
+                <option value="today" ${cfType==='today'?'selected':''}>Hôm nay</option>
+                <option value="yesterday" ${cfType==='yesterday'?'selected':''}>Hôm qua</option>
+                <option value="week" ${cfType==='week'?'selected':''}>Tuần này</option>
+                <option value="month" ${cfType==='month'?'selected':''}>Tháng này</option>
+                <option value="custom" ${cfType==='custom'?'selected':''}>Tùy chọn ngày</option>
+            </select>
+            ${cfType === 'custom' ? `
+                <div class="grid grid-cols-2 gap-2 animate-fadeIn">
+                    <input type="date" id="cash-from" value="${cfFrom || ''}" onchange="appMobile.viewReportDetail('cash')" class="p-3 bg-white border border-slate-100 rounded-xl text-xs font-bold outline-none">
+                    <input type="date" id="cash-to" value="${cfTo || ''}" onchange="appMobile.viewReportDetail('cash')" class="p-3 bg-white border border-slate-100 rounded-xl text-xs font-bold outline-none">
+                </div>
+            ` : ''}
+        </div>
+
+        <div class="bg-slate-900 p-6 rounded-[2.5rem] text-white mb-6 shadow-xl relative overflow-hidden">
+            <p class="text-[10px] font-black uppercase opacity-50 italic">Tổng tồn quỹ thực tế (TM + CK)</p>
+            <p class="text-3xl font-[900] text-blue-400 mt-1">${tongTon.toLocaleString()}đ</p>
+            <i class="fa-solid fa-vault absolute right-6 bottom-4 text-white/5 text-6xl"></i>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3 mb-6">
+            <div class="bg-emerald-50 p-4 rounded-2xl border border-emerald-100 shadow-sm">
+                <p class="text-[9px] font-black text-emerald-500 uppercase mb-1">Tiền mặt tồn</p>
+                <p class="text-sm font-[900] text-emerald-700">${tonTM.toLocaleString()}đ</p>
+            </div>
+            <div class="bg-blue-50 p-4 rounded-2xl border border-blue-100 shadow-sm">
+                <p class="text-[9px] font-black text-blue-500 uppercase mb-1">Chuyển khoản tồn</p>
+                <p class="text-sm font-[900] text-blue-700">${tonCK.toLocaleString()}đ</p>
+            </div>
+        </div>
+
+        <h3 class="text-[10px] font-black text-slate-400 uppercase mb-3 ml-2 italic">● Nhật ký thu chi mới nhất</h3>
+        <div class="space-y-3 pb-10">
+            ${filteredLedger.map(item => {
+                const isThu = item.Loai === 'Thu';
+                const isCash = (item.PTTT === 'Tiền mặt');
+                return `
+                    <div class="bg-white p-4 rounded-2xl border border-slate-50 shadow-sm flex justify-between items-center">
+                        <div class="flex-1 min-w-0">
+                            <p class="font-black text-slate-800 text-[11px] uppercase truncate">${item.Doi_Tuong || 'N/A'}</p>
+                            <p class="text-[8px] text-slate-400 font-bold italic truncate">
+                                <i class="${isCash ? 'fa-solid fa-money-bill-1' : 'fa-solid fa-building-columns'} mr-1"></i>
+                                ${item.Noi_Dung}
+                            </p>
+                        </div>
+                        <div class="text-right ml-4">
+                            <p class="font-[900] ${isThu ? 'text-emerald-500' : 'text-rose-500'} text-xs">
+                                ${isThu ? '+' : '-'}${Number(item.So_Tien).toLocaleString()}
+                            </p>
+                            <p class="text-[7px] text-slate-300 font-bold uppercase tracking-tighter">${item.Thoi_Gian?.split(' ')[1] || ''}</p>
+                        </div>
+                    </div>
+                `;
+            }).join('') || '<div class="py-10 text-center opacity-20 italic text-xs uppercase font-black">Trống</div>'}
+        </div>
+    `;
+}
+break;
         }
 
         // Hiển thị nội dung vào Popup hiện có trong mobile.html
