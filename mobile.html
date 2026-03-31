@@ -160,7 +160,8 @@
             <h2 class="font-[900] text-xl uppercase italic mb-6 text-slate-800 flex items-center gap-2">
                 <i class="fa-solid fa-calendar-plus text-blue-600"></i> Đặt lịch mới
             </h2>
-            <div class="space-y-4 max-h-[65vh] overflow-y-auto no-scrollbar pb-6 px-1">
+            
+            <div class="space-y-4 max-h-[70vh] overflow-y-auto no-scrollbar pb-6 px-1">
                 <div class="grid grid-cols-2 gap-3">
                     <div class="bg-slate-50 p-3 rounded-2xl border border-slate-100">
                         <label class="text-[9px] font-black uppercase text-slate-400 block mb-1">Ngày chơi</label>
@@ -171,14 +172,49 @@
                         <select id="mb-court-id" class="w-full bg-transparent font-bold text-sm outline-none appearance-none"></select>
                     </div>
                 </div>
-                <div class="bg-slate-50 p-4 rounded-2xl border border-slate-100">
-                    <label class="text-[9px] font-black uppercase text-slate-400 block mb-1">Tên khách hàng</label>
-                    <input type="text" id="mb-name" placeholder="Nhập tên khách..." class="w-full bg-transparent font-black text-blue-600 outline-none">
-                </div>
+
+                <div class="bg-slate-50 p-4 rounded-2xl border border-slate-100 relative">
+    <label class="text-[9px] font-black uppercase text-slate-400 block mb-1">Tên khách hàng</label>
+    <div class="relative">
+        <input type="text" id="mb-name" 
+               oninput="appMobile.suggestMember(this.value)" 
+               placeholder="Nhập tên hoặc SĐT..." 
+               class="w-full bg-transparent font-black text-blue-600 outline-none" autocomplete="off">
+        
+        <div id="mb-member-suggestions" class="absolute z-[1100] left-0 right-0 top-full mt-2 bg-white shadow-2xl rounded-2xl hidden max-h-48 overflow-y-auto border border-slate-100">
+        </div>
+    </div>
+    <input type="hidden" id="mb-member-id">
+</div>
+
                 <div class="bg-slate-50 p-4 rounded-2xl border border-slate-100">
                     <label class="text-[9px] font-black uppercase text-slate-400 block mb-1">Số điện thoại</label>
                     <input type="tel" id="mb-phone" placeholder="09xxxxxxxx" class="w-full bg-transparent font-bold outline-none">
                 </div>
+
+                <div class="p-4 bg-indigo-50/50 rounded-2xl border border-indigo-100">
+                    <label class="flex items-center gap-2 font-black text-indigo-700 cursor-pointer text-[10px] uppercase">
+                        <input type="checkbox" id="mb-repeat" class="w-4 h-4 rounded-md accent-indigo-600" 
+                               onchange="document.getElementById('mb-repeat-options').classList.toggle('hidden', !this.checked)">
+                        Đặt lịch cố định hàng tuần
+                    </label>
+                    <div id="mb-repeat-options" class="hidden mt-3 space-y-3 pt-3 border-t border-indigo-100">
+                        <div class="flex justify-between gap-1 overflow-x-auto no-scrollbar pb-1">
+                            <label class="flex-1 min-w-[38px]"><input type="checkbox" name="mb-repeat-days" value="1" class="hidden peer"><div class="text-center py-2 rounded-xl border bg-white text-[9px] font-black peer-checked:bg-indigo-600 peer-checked:text-white transition-all cursor-pointer">T2</div></label>
+                            <label class="flex-1 min-w-[38px]"><input type="checkbox" name="mb-repeat-days" value="2" class="hidden peer"><div class="text-center py-2 rounded-xl border bg-white text-[9px] font-black peer-checked:bg-indigo-600 peer-checked:text-white transition-all cursor-pointer">T3</div></label>
+                            <label class="flex-1 min-w-[38px]"><input type="checkbox" name="mb-repeat-days" value="3" class="hidden peer"><div class="text-center py-2 rounded-xl border bg-white text-[9px] font-black peer-checked:bg-indigo-600 peer-checked:text-white transition-all cursor-pointer">T4</div></label>
+                            <label class="flex-1 min-w-[38px]"><input type="checkbox" name="mb-repeat-days" value="4" class="hidden peer"><div class="text-center py-2 rounded-xl border bg-white text-[9px] font-black peer-checked:bg-indigo-600 peer-checked:text-white transition-all cursor-pointer">T5</div></label>
+                            <label class="flex-1 min-w-[38px]"><input type="checkbox" name="mb-repeat-days" value="5" class="hidden peer"><div class="text-center py-2 rounded-xl border bg-white text-[9px] font-black peer-checked:bg-indigo-600 peer-checked:text-white transition-all cursor-pointer">T6</div></label>
+                            <label class="flex-1 min-w-[38px]"><input type="checkbox" name="mb-repeat-days" value="6" class="hidden peer"><div class="text-center py-2 rounded-xl border bg-white text-[9px] font-black peer-checked:bg-indigo-600 peer-checked:text-white transition-all cursor-pointer">T7</div></label>
+                            <label class="flex-1 min-w-[38px]"><input type="checkbox" name="mb-repeat-days" value="0" class="hidden peer"><div class="text-center py-2 rounded-xl border bg-white text-[9px] font-black peer-checked:bg-indigo-600 peer-checked:text-white transition-all cursor-pointer">CN</div></label>
+                        </div>
+                        <div class="flex items-center justify-between px-1">
+                            <span class="text-[9px] font-black text-slate-400 uppercase italic">Số tuần lặp:</span>
+                            <input type="number" id="mb-repeat-weeks" value="4" min="1" max="52" class="w-14 p-1.5 rounded-xl border text-center font-black text-indigo-600 bg-white outline-none">
+                        </div>
+                    </div>
+                </div>
+
                 <div class="grid grid-cols-2 gap-3">
                     <div class="bg-blue-50 p-3 rounded-2xl border border-blue-100">
                         <label class="text-[9px] font-black text-blue-400 block mb-1 uppercase">Giờ vào</label>
@@ -189,11 +225,13 @@
                         <input type="time" id="mb-end" class="w-full bg-transparent font-black text-rose-700 outline-none text-lg">
                     </div>
                 </div>
+
                 <div class="bg-emerald-50 p-4 rounded-2xl border border-emerald-100">
                     <label class="text-[9px] font-black text-emerald-500 block mb-1 uppercase italic">Tiền đặt cọc (đ)</label>
                     <input type="number" id="mb-deposit" placeholder="0" class="w-full bg-transparent font-black text-emerald-700 outline-none text-lg">
                 </div>
             </div>
+
             <div class="grid grid-cols-2 gap-3 pt-2">
                 <button onclick="appMobile.closeBookingModal()" class="py-4 bg-slate-100 text-slate-400 rounded-2xl font-black uppercase text-[10px]">Hủy bỏ</button>
                 <button onclick="appMobile.saveBooking()" class="py-4 bg-blue-600 text-white rounded-2xl font-black uppercase text-[10px] shadow-lg shadow-blue-100 active:scale-95 transition-all">Xác nhận đặt</button>
