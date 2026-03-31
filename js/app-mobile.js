@@ -640,35 +640,38 @@ const appMobile = {
 
     // HÀM SỬA LỊCH (Mở lại modal và điền dữ liệu)
     editBooking: (id) => {
-        const b = window.dataCache.bookings[id];
-        if (!b) return;
+    const b = window.dataCache.bookings[id];
+    if (!b) return;
 
-        // Lưu ID đang sửa vào một biến tạm để lúc save biết là update hay tạo mới
-        window.editingBookingId = id;
+    // QUAN TRỌNG: Gán ID trước để hàm openBookingModal biết là đang sửa
+    window.editingBookingId = id;
 
-        // Mở modal
-        appMobile.openBookingModal();
+    // Mở modal trước để đảm bảo các thành phần HTML sẵn sàng
+    appMobile.openBookingModal();
 
-        // Điền dữ liệu cũ vào form
-        document.getElementById('mb-court-id').value = b.Court_ID || "";
-        document.getElementById('mb-date').value = b.Ngay || "";
-        document.getElementById('mb-name').value = b.Ten_Khach || "";
-        document.getElementById('mb-phone').value = b.SDT || "";
-        document.getElementById('mb-start').value = b.Bat_Dau || "";
-        document.getElementById('mb-end').value = b.Ket_Thuc || "";
-        document.getElementById('mb-deposit').value = b.Tien_Coc || 0;
-        document.getElementById('mb-member-id').value = b.Member_ID || "";
+    // Điền dữ liệu (Lệnh này chạy sau openBookingModal để đè dữ liệu lên)
+    document.getElementById('mb-court-id').value = b.Court_ID || "";
+    document.getElementById('mb-date').value = b.Ngay || "";
+    document.getElementById('mb-name').value = b.Ten_Khach || "";
+    document.getElementById('mb-phone').value = b.SDT || "";
+    
+    // Đảm bảo format giờ là HH:mm (ví dụ 08:00) để input type="time" nhận diện được
+    document.getElementById('mb-start').value = b.Bat_Dau || "";
+    document.getElementById('mb-end').value = b.Ket_Thuc || "";
+    
+    document.getElementById('mb-deposit').value = b.Tien_Coc || 0;
+    document.getElementById('mb-member-id').value = b.Member_ID || "";
 
-        // Đổi tiêu đề modal để người dùng biết đang sửa
-        const modalTitle = document.querySelector('#booking-sheet h2');
-        if (modalTitle) modalTitle.innerHTML = `<i class="fa-solid fa-pen-to-square text-orange-500"></i> Cập nhật lịch đặt`;
-    },
+    // Đổi tiêu đề
+    const modalTitle = document.querySelector('#booking-sheet h2');
+    if (modalTitle) modalTitle.innerHTML = `<i class="fa-solid fa-pen-to-square text-orange-500"></i> Cập nhật lịch đặt`;
+},
     openBookingModal: () => {
     const modal = document.getElementById('modal-mobile-booking');
     const sheet = document.getElementById('booking-sheet');
     const courtSelect = document.getElementById('mb-court-id');
 
-    // 1. Nạp danh sách sân vào Select (luôn cần thiết)
+    // 1. Nạp danh sách sân
     if (courtSelect) {
         let html = '<option value="">-- Chọn sân --</option>';
         Object.entries(window.dataCache.courts || {}).forEach(([id, c]) => { 
@@ -677,38 +680,31 @@ const appMobile = {
         courtSelect.innerHTML = html;
     }
 
-    // 2. KIỂM TRA: Nếu không phải đang SỬA (window.editingBookingId null) thì mới RESET form
+    // 2. Chỉ RESET nếu là tạo mới (window.editingBookingId là null)
     if (!window.editingBookingId) {
-        // Reset tiêu đề về trạng thái Thêm mới
         const modalTitle = document.querySelector('#booking-sheet h2');
         if (modalTitle) modalTitle.innerHTML = `<i class="fa-solid fa-calendar-plus text-blue-600"></i> Đặt lịch mới`;
 
-        // Reset các trường nhập liệu
         document.getElementById('mb-name').value = "";
         document.getElementById('mb-phone').value = "";
         document.getElementById('mb-member-id').value = "";
-        document.getElementById('mb-start').value = "";
-        document.getElementById('mb-end').value = "";
+        document.getElementById('mb-start').value = ""; // Xóa trắng khi tạo mới
+        document.getElementById('mb-end').value = "";   // Xóa trắng khi tạo mới
         document.getElementById('mb-deposit').value = 0;
+        document.getElementById('mb-date').value = document.getElementById('view-date-mobile').value;
         
-        // Reset phần đặt lịch cố định
         const repeatChk = document.getElementById('mb-repeat');
         if (repeatChk) {
             repeatChk.checked = false;
             document.getElementById('mb-repeat-options').classList.add('hidden');
-            // Bỏ chọn tất cả các thứ (T2-CN)
             document.querySelectorAll('input[name="mb-repeat-days"]').forEach(chk => chk.checked = false);
         }
-
-        // Mặc định lấy ngày đang xem ở lịch
-        document.getElementById('mb-date').value = document.getElementById('view-date-mobile').value;
     }
 
-    // 3. Luôn ẩn vùng gợi ý hội viên khi mở modal
-    const suggestionBox = document.getElementById('mb-member-suggestions');
-    if (suggestionBox) suggestionBox.classList.add('hidden');
+    // 3. Luôn ẩn gợi ý
+    document.getElementById('mb-member-suggestions').classList.add('hidden');
 
-    // 4. Hiệu ứng hiển thị Modal (Slide up)
+    // 4. Hiển thị modal
     modal.classList.remove('hidden');
     setTimeout(() => {
         sheet.style.transform = "translateY(0)";
