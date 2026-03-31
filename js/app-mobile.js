@@ -77,6 +77,7 @@ const appMobile = {
             }).join('');
         }
     },
+    
     // HÀM MỚI 1: Gợi ý hội viên khi gõ
     suggestMember: (val) => {
         const suggestionsBox = document.getElementById('mb-member-suggestions');
@@ -583,40 +584,136 @@ const appMobile = {
     },
 
     renderCalendar: () => {
-        const container = document.getElementById('list-calendar-mobile');
-        const viewDate = document.getElementById('view-date-mobile')?.value;
-        if (!container || !viewDate) return;
-        const bookings = window.dataCache.bookings || {};
-        const courts = window.dataCache.courts || {};
-        const list = Object.entries(bookings).filter(([id, b]) => b.Ngay === viewDate && b.Trang_Thai !== "Chờ xác nhận").sort((a, b) => a[1].Bat_Dau.localeCompare(b[1].Bat_Dau));
-        if (list.length === 0) {
-            container.innerHTML = `<div class="py-20 text-center opacity-20"><i class="fa-solid fa-calendar-xmark text-4xl mb-2"></i><p class="font-black uppercase text-[10px]">Không có lịch đặt</p></div>`;
-            return;
-        }
-        container.innerHTML = list.map(([id, b]) => `<div class="bg-white p-4 rounded-3xl border border-slate-100 shadow-sm flex items-center gap-4">
-            <div class="w-16 text-center border-r pr-4"><p class="text-xs font-black text-blue-600">${b.Bat_Dau}</p><p class="text-[9px] font-bold text-slate-300 uppercase">${b.Ket_Thuc}</p></div>
-            <div class="flex-1"><div class="flex justify-between items-start"><h3 class="font-black text-slate-800 uppercase text-[11px] leading-tight">${b.Ten_Khach}</h3><span class="bg-indigo-50 text-indigo-600 text-[8px] font-black px-2 py-0.5 rounded uppercase">${courts[b.Court_ID]?.Ten_San || b.Court_ID}</span></div><p class="text-[10px] font-bold text-slate-400 mt-1">${b.SDT || 'N/A'}</p></div>
+    const container = document.getElementById('list-calendar-mobile');
+    const viewDate = document.getElementById('view-date-mobile')?.value;
+    if (!container || !viewDate) return;
+
+    const bookings = window.dataCache.bookings || {};
+    const courts = window.dataCache.courts || {};
+
+    const list = Object.entries(bookings)
+        .filter(([id, b]) => b.Ngay === viewDate && b.Trang_Thai !== "Chờ xác nhận")
+        .sort((a, b) => a[1].Bat_Dau.localeCompare(b[1].Bat_Dau));
+
+    if (list.length === 0) {
+        container.innerHTML = `<div class="py-20 text-center opacity-20"><i class="fa-solid fa-calendar-xmark text-4xl mb-2"></i><p class="font-black uppercase text-[10px]">Không có lịch đặt</p></div>`;
+        return;
+    }
+
+    container.innerHTML = list.map(([id, b]) => `
+        <div class="bg-white p-4 rounded-3xl border border-slate-100 shadow-sm flex items-center gap-4 animate-fadeIn">
+            <div class="w-16 text-center border-r pr-4">
+                <p class="text-xs font-black text-blue-600">${b.Bat_Dau}</p>
+                <p class="text-[9px] font-bold text-slate-300 uppercase">${b.Ket_Thuc}</p>
+            </div>
+            <div class="flex-1 min-w-0">
+                <div class="flex justify-between items-start">
+                    <h3 class="font-black text-slate-800 uppercase text-[11px] leading-tight truncate mr-2">${b.Ten_Khach}</h3>
+                    <span class="bg-indigo-50 text-indigo-600 text-[8px] font-black px-2 py-0.5 rounded uppercase flex-shrink-0">
+                        ${courts[b.Court_ID]?.Ten_San || b.Court_ID}
+                    </span>
+                </div>
+                <p class="text-[10px] font-bold text-slate-400 mt-1">${b.SDT || 'N/A'}</p>
+            </div>
+            
+            <div class="flex gap-2 border-l pl-4">
+                <button onclick="appMobile.editBooking('${id}')" class="w-8 h-8 flex items-center justify-center bg-blue-50 text-blue-600 rounded-full active:scale-90 transition-all">
+                    <i class="fa-solid fa-pen text-[10px]"></i>
+                </button>
+                <button onclick="appMobile.deleteBooking('${id}')" class="w-8 h-8 flex items-center justify-center bg-rose-50 text-rose-500 rounded-full active:scale-90 transition-all">
+                    <i class="fa-solid fa-trash-can text-[10px]"></i>
+                </button>
+            </div>
         </div>`).join('');
+},
+// HÀM XOÁ LỊCH
+    deleteBooking: async (id) => {
+        if (confirm("🔔 Bạn có chắc chắn muốn xoá lịch đặt này không?")) {
+            try {
+                await window.remove(window.ref(window.db, `bookings/${id}`));
+                // Toast thông báo nếu cần
+            } catch (e) {
+                alert("Lỗi khi xoá: " + e.message);
+            }
+        }
     },
 
+    // HÀM SỬA LỊCH (Mở lại modal và điền dữ liệu)
+    editBooking: (id) => {
+        const b = window.dataCache.bookings[id];
+        if (!b) return;
+
+        // Lưu ID đang sửa vào một biến tạm để lúc save biết là update hay tạo mới
+        window.editingBookingId = id;
+
+        // Mở modal
+        appMobile.openBookingModal();
+
+        // Điền dữ liệu cũ vào form
+        document.getElementById('mb-court-id').value = b.Court_ID || "";
+        document.getElementById('mb-date').value = b.Ngay || "";
+        document.getElementById('mb-name').value = b.Ten_Khach || "";
+        document.getElementById('mb-phone').value = b.SDT || "";
+        document.getElementById('mb-start').value = b.Bat_Dau || "";
+        document.getElementById('mb-end').value = b.Ket_Thuc || "";
+        document.getElementById('mb-deposit').value = b.Tien_Coc || 0;
+        document.getElementById('mb-member-id').value = b.Member_ID || "";
+
+        // Đổi tiêu đề modal để người dùng biết đang sửa
+        const modalTitle = document.querySelector('#booking-sheet h2');
+        if (modalTitle) modalTitle.innerHTML = `<i class="fa-solid fa-pen-to-square text-orange-500"></i> Cập nhật lịch đặt`;
+    },
     openBookingModal: () => {
-        const modal = document.getElementById('modal-mobile-booking');
-        const sheet = document.getElementById('booking-sheet');
-        const courtSelect = document.getElementById('mb-court-id');
-        if (courtSelect) {
-            let html = '<option value="">-- Chọn sân --</option>';
-            Object.entries(window.dataCache.courts || {}).forEach(([id, c]) => { html += `<option value="${id}">${c.Ten_San}</option>`; });
-            courtSelect.innerHTML = html;
-        }
-        document.getElementById('mb-date').value = document.getElementById('view-date-mobile').value;
-        modal.classList.remove('hidden');
-        setTimeout(() => sheet.style.transform = "translateY(0)", 10);
-        // Bổ sung các dòng reset này:
+    const modal = document.getElementById('modal-mobile-booking');
+    const sheet = document.getElementById('booking-sheet');
+    const courtSelect = document.getElementById('mb-court-id');
+
+    // 1. Nạp danh sách sân vào Select (luôn cần thiết)
+    if (courtSelect) {
+        let html = '<option value="">-- Chọn sân --</option>';
+        Object.entries(window.dataCache.courts || {}).forEach(([id, c]) => { 
+            html += `<option value="${id}">${c.Ten_San}</option>`; 
+        });
+        courtSelect.innerHTML = html;
+    }
+
+    // 2. KIỂM TRA: Nếu không phải đang SỬA (window.editingBookingId null) thì mới RESET form
+    if (!window.editingBookingId) {
+        // Reset tiêu đề về trạng thái Thêm mới
+        const modalTitle = document.querySelector('#booking-sheet h2');
+        if (modalTitle) modalTitle.innerHTML = `<i class="fa-solid fa-calendar-plus text-blue-600"></i> Đặt lịch mới`;
+
+        // Reset các trường nhập liệu
         document.getElementById('mb-name').value = "";
         document.getElementById('mb-phone').value = "";
         document.getElementById('mb-member-id').value = "";
-        document.getElementById('mb-member-suggestions').classList.add('hidden');
-    },
+        document.getElementById('mb-start').value = "";
+        document.getElementById('mb-end').value = "";
+        document.getElementById('mb-deposit').value = 0;
+        
+        // Reset phần đặt lịch cố định
+        const repeatChk = document.getElementById('mb-repeat');
+        if (repeatChk) {
+            repeatChk.checked = false;
+            document.getElementById('mb-repeat-options').classList.add('hidden');
+            // Bỏ chọn tất cả các thứ (T2-CN)
+            document.querySelectorAll('input[name="mb-repeat-days"]').forEach(chk => chk.checked = false);
+        }
+
+        // Mặc định lấy ngày đang xem ở lịch
+        document.getElementById('mb-date').value = document.getElementById('view-date-mobile').value;
+    }
+
+    // 3. Luôn ẩn vùng gợi ý hội viên khi mở modal
+    const suggestionBox = document.getElementById('mb-member-suggestions');
+    if (suggestionBox) suggestionBox.classList.add('hidden');
+
+    // 4. Hiệu ứng hiển thị Modal (Slide up)
+    modal.classList.remove('hidden');
+    setTimeout(() => {
+        sheet.style.transform = "translateY(0)";
+    }, 10);
+},
 
     closeBookingModal: () => {
         const modal = document.getElementById('modal-mobile-booking');
@@ -638,69 +735,93 @@ const appMobile = {
     if (!courtId || !name || !start || !end || !date) return alert("⚠️ Vui lòng nhập đủ thông tin bắt buộc!");
 
     try {
-        let bookingsToSave = [];
+        const updates = {};
+        const ngayHomNayStr = new Date().toLocaleString('vi-VN');
+        
+        // Dữ liệu cơ sở
         const baseData = {
-    Court_ID: courtId,
-    Bat_Dau: start,
-    Ket_Thuc: end,
-    Ten_Khach: name,
-    SDT: phone,
-    Member_ID: document.getElementById('mb-member-id').value || null, // THÊM DÒNG NÀY
-    Tien_Coc: isRepeat ? 0 : deposit,
-    Trang_Thai: "Chưa nhận sân",
-    Thoi_Gian_Tao: new Date().toLocaleString('vi-VN')
-};
+            Court_ID: courtId,
+            Bat_Dau: start,
+            Ket_Thuc: end,
+            Ten_Khach: name,
+            SDT: phone,
+            Member_ID: document.getElementById('mb-member-id').value || null,
+            Tien_Coc: isRepeat ? 0 : deposit,
+            Trang_Thai: "Chưa nhận sân",
+            Thoi_Gian_Tao: ngayHomNayStr
+        };
 
-        if (isRepeat) {
+        // TRƯỜNG HỢP 1: ĐANG CHỈNH SỬA (Update)
+        if (window.editingBookingId) {
+            const bId = window.editingBookingId;
+            // Lấy lại dữ liệu cũ để giữ các trường không hiển thị trên form (nếu cần)
+            const oldData = window.dataCache.bookings[bId] || {};
+            
+            updates[`bookings/${bId}`] = {
+                ...oldData, // Giữ lại ID gốc hoặc các trường ẩn khác
+                ...baseData,
+                Ngay: date,
+                Thoi_Gian_Sua: ngayHomNayStr // Đánh dấu thời gian sửa
+            };
+            
+            await window.update(window.ref(window.db), updates);
+            alert("✅ Đã cập nhật lịch đặt thành công!");
+        } 
+        // TRƯỜNG HỢP 2: ĐẶT LỊCH CỐ ĐỊNH (Lặp lại)
+        else if (isRepeat) {
             const repeatWeeks = parseInt(document.getElementById('mb-repeat-weeks').value) || 1;
             const selectedDays = Array.from(document.querySelectorAll('input[name="mb-repeat-days"]:checked')).map(el => parseInt(el.value));
 
             if (selectedDays.length === 0) return alert("⚠️ Vui lòng chọn ít nhất một thứ trong tuần!");
 
             let startDate = new Date(date);
+            let count = 0;
             for (let i = 0; i < repeatWeeks * 7; i++) {
                 let current = new Date(startDate);
                 current.setDate(startDate.getDate() + i);
                 
                 if (selectedDays.includes(current.getDay())) {
                     const dateStr = current.toISOString().split('T')[0];
-                    bookingsToSave.push({
+                    const newId = 'BK-FIX-' + Date.now() + '-' + count;
+                    updates[`bookings/${newId}`] = {
                         ...baseData,
-                        Ngay: dateStr,
-                        Id: 'BK-FIX-' + Date.now() + '-' + i
-                    });
+                        Ngay: dateStr
+                    };
+                    count++;
                 }
             }
-        } else {
-            bookingsToSave.push({
+            await window.update(window.ref(window.db), updates);
+            alert(`✅ Đã đặt thành công ${count} lịch cố định!`);
+        } 
+        // TRƯỜNG HỢP 3: TẠO MỚI LỊCH ĐƠN
+        else {
+            const newId = 'BK-MB-' + Date.now();
+            updates[`bookings/${newId}`] = {
                 ...baseData,
-                Ngay: date,
-                Id: 'BK-MB-' + Date.now()
-            });
-        }
-
-        // Thực hiện lưu lên Firebase
-        const updates = {};
-        bookingsToSave.forEach(b => {
-            const bId = b.Id;
-            delete b.Id;
-            updates[`bookings/${bId}`] = b;
-        });
-
-        // Nếu có tiền cọc (lịch đơn), tạo bill cọc
-        if (!isRepeat && deposit > 0) {
-            const billId = 'BILL-DEP-' + Date.now();
-            updates[`bills/${billId}`] = {
-                Khach_Hang: name, Tong_Tien: deposit, PTTT: "Tiền mặt",
-                Noi_Dung: `Cọc sân (Mobile): ${courtId}`, Ngay_Thang: date,
-                Thoi_Gian: baseData.Thoi_Gian_Tao, Loai_HD: "Tiền cọc"
+                Ngay: date
             };
+
+            // Nếu có tiền cọc, tạo bill cọc tự động
+            if (deposit > 0) {
+                const billId = 'BILL-DEP-' + Date.now();
+                updates[`bills/${billId}`] = {
+                    Khach_Hang: name, 
+                    Tong_Tien: deposit, 
+                    PTTT: "Tiền mặt",
+                    Noi_Dung: `Cọc sân (Mobile): ${courtId}`, 
+                    Ngay_Thang: date,
+                    Thoi_Gian: ngayHomNayStr, 
+                    Loai_HD: "Tiền cọc"
+                };
+            }
+            await window.update(window.ref(window.db), updates);
+            alert("✅ Đã đặt lịch thành công!");
         }
 
-        await window.update(window.ref(window.db), updates);
-        alert(`✅ Đã đặt thành công ${bookingsToSave.length} lịch!`);
         appMobile.closeBookingModal();
+        window.editingBookingId = null; // Reset trạng thái sau khi lưu
     } catch (e) { 
+        console.error("Lỗi saveBooking:", e);
         alert("Lỗi: " + e.message); 
     }
 },
