@@ -537,33 +537,43 @@ toggleStockPaymentFields: () => {
         
         const court = snapshot.val();
         const conf = window.dataCache.config || {};
-        const startTime = court.Gio_Vao;
-        if (!startTime) return alert("Sân chưa có giờ vào!");
-
-        const now = new Date();
-        const endTime = now.toLocaleTimeString('vi-VN', {hour:'2-digit', minute:'2-digit'});
-        const [h1, m1] = startTime.split(':').map(Number);
-        const minutes = (now.getHours() * 60 + now.getMinutes()) - (h1 * 60 + m1);
         
-        // 1. TÍNH TIỀN GIỜ THEO CẤU HÌNH (LOẠI SÂN + GIỜ VÀNG)
+        if (!court.Gio_Vao) return alert("Sân chưa có giờ vào!");
+
+        // 1. GỌI LOGIC TÍNH TOÁN THỜI GIAN THÔNG MINH (Từ app-logic.js)
+        const timeCalc = app.calculatePickleballFinalTime(court);
+        const totalMinutes = timeCalc.totalMins;
+        const endTime = timeCalc.realOut;
+
+        // 2. TÍNH TIỀN GIỜ LINH HOẠT THEO NHIỀU KHUNG GIỜ
         const priceList = conf.priceList || {};
-        // Lấy giá theo loại sân, nếu không có thì lấy priceNormal
+        const timeSlots = conf.timeSlots || []; // Danh sách khung giờ mới
+        
+        // Lấy giá gốc theo loại sân
         let hourlyRate = parseInt(priceList[court.Loai_San] || conf.priceNormal || 100000);
         
-        // Phụ phí giờ vàng
-        if(startTime >= (conf.peakStart || "17:00")) {
-            hourlyRate += parseInt(conf.pricePeak || 0);
+        // --- LOGIC TÌM PHỤ PHÍ THEO KHUNG GIỜ ---
+        // Ưu tiên kiểm tra khung giờ dựa trên Giờ Vào Lịch (nếu có) hoặc Giờ Vào Thực Tế
+        const checkTime = court.Gio_Vao_Lich || court.Gio_Vao;
+        const matchedSlot = timeSlots.find(slot => checkTime >= slot.start && checkTime < slot.end);
+        
+        if (matchedSlot) {
+            hourlyRate += parseInt(matchedSlot.price || 0);
+            console.log(`Áp dụng phụ phí khung giờ ${matchedSlot.start}-${matchedSlot.end}: +${matchedSlot.price}đ`);
         }
 
-        // Phụ phí cuối tuần (Nếu có thiết lập %)
+        // Phụ phí cuối tuần (Cộng dồn sau khi đã có giá khung giờ)
+        const now = new Date();
         const isWeekend = now.getDay() === 0 || now.getDay() === 6;
         if (isWeekend && conf.weekendUp) {
             hourlyRate = hourlyRate * (1 + parseInt(conf.weekendUp) / 100);
         }
 
-        let timeMoney = Math.ceil((Math.max(0, minutes/60 * hourlyRate)) / 1000) * 1000; 
+        // --- QUY TẮC LÀM TRÒN BLOCK 30 PHÚT ---
+        const roundedMinutes = Math.ceil(totalMinutes / 30) * 30;
+        const timeMoney = (roundedMinutes / 60) * hourlyRate;
 
-        // 2. TÍNH TIỀN DỊCH VỤ
+        // 3. TÍNH TIỀN DỊCH VỤ
         let sMoney = 0; 
         let sLines = '';
         let services = court.Playing?.Services || court.Dich_Vu || {};
@@ -584,50 +594,52 @@ toggleStockPaymentFields: () => {
             }
         });
 
-        // 3. XỬ LÝ GIẢM GIÁ HỘI VIÊN (THEO HẠNG)
+        // 4. XỬ LÝ GIẢM GIÁ HỘI VIÊN (THEO HẠNG)
         let discountPercent = 0;
         let rankName = "Vãng lai";
-        const memberBox = document.getElementById('member-rank-box');
-        
         if (court.Member_ID && window.dataCache.members) {
             const member = window.dataCache.members[court.Member_ID];
             if (member) {
                 rankName = member.Hang_HV || "Đồng";
-                // Lấy % giảm từ config: mCopper, mSilver, mGold
-                const rankKey = rankName === "Vàng" ? "mGold" : (rankName === "Bạc" ? "mSilver" : "mCopper");
+                const rankKey = rankName === "Kim cương" ? "mDiamond" : (rankName === "Vàng" ? "mGold" : (rankName === "Bạc" ? "mSilver" : "mCopper"));
                 discountPercent = parseInt(conf[rankKey] || 0);
-
-                // Hiển thị hạng lên giao diện (Nếu bạn đã thêm HTML member-rank-box)
-                if (memberBox) {
-                    memberBox.classList.remove('hidden');
-                    document.getElementById('display-rank-name').innerText = rankName;
-                    document.getElementById('display-rank-percent').innerText = discountPercent;
-                }
             }
-        } else if (memberBox) {
-            memberBox.classList.add('hidden');
         }
 
-        // 4. TỔNG HỢP TIỀN
+        // 5. TỔNG HỢP TIỀN
         const deposit = Number(court.Da_Coc || 0);
-        const subTotal = timeMoney + sMoney; // Tổng trước khi giảm hạng
-        
-        // Tính tiền giảm theo hạng
+        const subTotal = timeMoney + sMoney; 
         const discountMoney = Math.round((subTotal * discountPercent) / 100);
         const finalTotal = Math.max(0, subTotal - discountMoney - deposit);
 
-        // Gán giá trị vào các ô ẩn
+        // Gán dữ liệu vào các ô ẩn để xử lý khi bấm "Xác nhận thanh toán"
         document.getElementById('temp-bill-total').value = finalTotal;
         document.getElementById('base-total-without-manual').value = subTotal - discountMoney;
-        if (document.getElementById('manual-discount')) document.getElementById('manual-discount').value = 0;
+        if (document.getElementById('manual-discount-cash')) document.getElementById('manual-discount-cash').value = 0;
+        if (document.getElementById('manual-discount-percent')) document.getElementById('manual-discount-percent').value = 0;
         
-        // 5. HIỂN THỊ LÊN GIAO DIỆN
+        // 6. HIỂN THỊ GIAO DIỆN HÓA ĐƠN
         const billContent = document.getElementById('bill-content');
         if (billContent) {
             billContent.innerHTML = `
                 <div class="space-y-3">
+                    <div class="p-3 bg-blue-50 rounded-2xl border border-blue-100 mb-2">
+                        <div class="flex justify-between font-black text-blue-800 text-xs">
+                            <span>THỜI GIAN TÍNH TIỀN:</span>
+                            <span>${(roundedMinutes / 60).toFixed(1)} Giờ</span>
+                        </div>
+                        <div class="flex justify-between text-[10px] text-blue-600 mt-1">
+                            <span>${court.Gio_Vao} ➔ ${endTime}</span>
+                            <span class="italic text-right">${timeCalc.detail}</span>
+                        </div>
+                        ${matchedSlot ? `
+                        <div class="text-[9px] font-bold text-rose-500 mt-1 border-t border-blue-100 pt-1 uppercase">
+                            * Đã bao gồm phụ phí khung giờ: +${matchedSlot.price.toLocaleString()}đ/h
+                        </div>` : ''}
+                    </div>
+
                     <div class="flex justify-between font-bold border-b border-slate-100 pb-2 text-slate-700">
-                        <div>Tiền giờ (${startTime} - ${endTime})</div>
+                        <div>Tiền giờ sân</div>
                         <span>${timeMoney.toLocaleString()}đ</span>
                     </div>
                     
@@ -660,6 +672,5 @@ toggleStockPaymentFields: () => {
         console.error("Lỗi openCheckout:", err);
         alert("Lỗi: " + err.message); 
     }
-}
+},
 };
-
