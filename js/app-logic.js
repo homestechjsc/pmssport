@@ -138,91 +138,104 @@ window.app = {
 
    // Component tạo Card riêng lẻ
     createCourtCard: (id, c) => {
-        const isBusy = c.Trang_Thai === "Đang chơi";
-        const isMaint = c.Trang_Thai === "Bảo trì";
-        const deposit = Number(c.Da_Coc || 0);
+    const isBusy = c.Trang_Thai === "Đang chơi";
+    const isMaint = c.Trang_Thai === "Bảo trì";
+    const deposit = Number(c.Da_Coc || 0);
 
-        // Cấu hình theme dựa trên trạng thái
-        let config = {
-            class: 'card-ready',
-            label: 'SẴN SÀNG',
-            labelClass: 'text-blue-600',
-            btnText: 'VÀO SÂN',
-            btnClass: 'bg-blue-600',
-            icon: 'fa-circle-check'
+    // Default configuration for "Ready" state
+    let config = {
+        class: 'card-ready',
+        label: 'SẴN SÀNG',
+        labelClass: 'text-blue-600',
+        btnText: 'VÀO SÂN',
+        btnClass: 'bg-blue-600',
+        icon: 'fa-circle-check'
+    };
+
+    if (isBusy) {
+        config = {
+            class: 'card-busy',
+            label: 'ĐANG CHƠI',
+            labelClass: 'text-red-600',
+            btnText: 'QUẢN LÝ',
+            btnClass: 'bg-red-600',
+            icon: 'fa-play-circle'
         };
+    } else if (isMaint) {
+        config = {
+            class: 'card-maint',
+            label: 'BẢO TRÌ',
+            labelClass: 'text-slate-500',
+            btnText: 'TẠM DỪNG',
+            btnClass: 'bg-slate-400',
+            icon: 'fa-screwdriver-wrench'
+        };
+    }
 
-        if (isBusy) {
-            config = {
-                class: 'card-busy',
-                label: 'ĐANG CHƠI',
-                labelClass: 'text-red-600',
-                btnText: 'QUẢN LÝ',
-                btnClass: 'bg-red-600',
-                icon: 'fa-play-circle'
-            };
-        } else if (isMaint) {
-            config = {
-                class: 'card-maint',
-                label: 'BẢO TRÌ',
-                labelClass: 'text-slate-500',
-                btnText: 'TẠM DỪNG',
-                btnClass: 'bg-slate-400',
-                icon: 'fa-screwdriver-wrench'
-            };
-        }
+    const card = document.createElement('div');
+    // Using relative positioning on the card so we can absolutely position the status label
+    card.className = `sport-card-rect ${config.class} p-4 cursor-pointer relative group overflow-hidden shadow-sm transition-all`;
+    card.dataset.id = id;
+    card.dataset.status = c.Trang_Thai || "Sẵn sàng";
 
-        const card = document.createElement('div');
-        card.className = `sport-card-rect ${config.class} p-4 cursor-pointer relative group overflow-hidden shadow-sm`;
-        card.dataset.id = id;
-        card.dataset.status = c.Trang_Thai;
-
-        // Nội dung card sử dụng Template String nhưng không chứa onclick
-        card.innerHTML = `
-            <img src="image_8e8406.png" class="court-bg-icon-top-right w-20 opacity-5 absolute top-2 right-2" alt="bg">
-            <div class="flex flex-col h-full z-10 relative">
-                <div class="flex justify-between items-start mb-2">
-                    <div class="flex flex-col">
-                        <span class="text-[13px] font-[900] text-slate-800 uppercase tracking-tighter">${c.Ten_San}</span>
-                        <span class="text-[8px] font-black ${config.labelClass} uppercase tracking-widest mt-0.5 flex items-center gap-1">
-                            <i class="fa-solid ${config.icon} text-[7px]"></i> ${config.label}
-                        </span>
-                    </div>
-                    ${isBusy ? `<span class="h-2 w-2 rounded-full status-dot-active"></span>` : ''}
+    card.innerHTML = `
+        <img src="image_8e8406.png" class="court-bg-icon-top-right w-20 opacity-5 absolute top-2 right-2" alt="bg">
+        <div class="flex flex-col h-full z-10 relative">
+            
+            <div class="flex justify-between items-start mb-2 relative">
+                <div class="flex flex-col">
+                    <span class="text-[13px] font-[900] text-slate-800 uppercase tracking-tighter">${c.Ten_San || id}</span>
                 </div>
-
-                <div class="flex-1 flex flex-col justify-center py-2">
-                    ${isBusy ? `
-                        <div>
-                            <p class="text-[13px] font-[900] text-slate-900 uppercase truncate mb-1">${c.Ten_Khach || 'Khách lẻ'}</p>
-                            <div class="flex items-center gap-2">
-                                <span class="text-[10px] font-black text-red-600 flex items-center bg-white px-2 py-0.5 rounded-md border border-red-50">
-                                    <i class="fa-regular fa-clock mr-1"></i> ${c.Gio_Vao || '--:--'}
-                                </span>
-                            </div>
-                        </div>
-                    ` : `
-                        <div class="flex items-center opacity-20 group-hover:opacity-100 transition-opacity">
-                            <span class="text-[9px] font-black text-slate-400 italic uppercase tracking-widest">Sẵn sàng đón khách</span>
-                        </div>
-                    `}
+                
+                <div class="absolute -top-1 -right-1 flex items-center gap-1.5">
+                    <span class="text-[8px] font-black ${config.labelClass} uppercase tracking-widest flex items-center gap-1 bg-white/70 px-1.5 py-0.5 rounded-md">
+                        <i class="fa-solid ${config.icon} text-[7px]"></i> ${config.label}
+                    </span>
+                    ${isBusy ? `<span class="h-2 w-2 rounded-full status-dot-active mt-0.5"></span>` : ''}
                 </div>
+            </div>
 
-                <div class="flex items-center justify-between pt-2 border-t border-slate-200/50 mt-auto">
-                    <div class="min-h-[14px]">
-                        ${isBusy && deposit > 0 ? `
-                            <span class="text-[10px] font-black text-orange-600 tracking-tighter">
-                                <i class="fa-solid fa-wallet mr-1 text-[8px]"></i>${deposit.toLocaleString()}
+            <div class="flex-1 flex flex-col justify-center py-1">
+                ${isBusy ? `
+                    <div class="space-y-1">
+                        <p class="text-[13px] font-[900] text-slate-900 uppercase truncate pr-16">${c.Ten_Khach || 'Khách lẻ'}</p>
+                        
+                        <div class="flex flex-col gap-1 items-start">
+                            <span class="text-[9px] font-black text-red-600 flex items-center bg-white px-2 py-0.5 rounded-md border border-red-50 shadow-sm">
+                                <i class="fa-regular fa-clock mr-1"></i> IN: ${c.Gio_Vao || '--:--'}
                             </span>
-                        ` : `<i class="fa-solid fa-table-tennis-paddle-ball text-slate-200 text-xs"></i>`}
+
+                            ${(c.Gio_Vao_Lich && c.Gio_Ra_Lich) ? `
+                                <span class="text-[9px] font-black text-blue-600 flex items-center bg-blue-50 px-2 py-0.5 rounded-md border border-blue-100 italic">
+                                    <i class="fa-solid fa-calendar-day mr-1 text-[8px]"></i> 
+                                    LỊCH: ${c.Gio_Vao_Lich} - ${c.Gio_Ra_Lich}
+                                </span>
+                            ` : ''}
+                        </div>
                     </div>
-                    <button class="h-7 px-4 rounded-lg font-black text-[9px] uppercase tracking-wider text-white shadow-sm transition-all active:scale-95 ${config.btnClass}">
-                        ${config.btnText}
-                    </button>
+                ` : `
+                    <div class="flex items-center opacity-20 group-hover:opacity-100 transition-opacity">
+                        <span class="text-[9px] font-black text-slate-400 italic uppercase tracking-widest">Sẵn sàng đón khách</span>
+                    </div>
+                `}
+            </div>
+
+            <div class="flex items-center justify-between pt-2 border-t border-slate-200/50 mt-auto">
+                <div class="min-h-[14px]">
+                    ${isBusy && deposit > 0 ? `
+                        <span class="text-[10px] font-black text-orange-600 tracking-tighter">
+                            <i class="fa-solid fa-wallet mr-1 text-[8px]"></i>${deposit.toLocaleString()}
+                        </span>
+                    ` : `<i class="fa-solid fa-table-tennis-paddle-ball text-slate-200 text-xs"></i>`}
                 </div>
-            </div>`;
-        return card;
-    },
+                <button class="h-7 px-4 rounded-lg font-black text-[9px] uppercase tracking-wider text-white shadow-sm transition-all active:scale-95 ${config.btnClass}">
+                    ${config.btnText}
+                </button>
+            </div>
+        </div>`;
+
+    return card;
+},
 
     // Hàm Render chính dùng DocumentFragment để tối ưu tốc độ
     renderCourts: () => {
@@ -618,7 +631,7 @@ window.app = {
     },
 
     // --- HÀM CHUYỂN LỊCH ĐẶT THÀNH ĐANG CHƠI (CHECK-IN) ---
-    confirmCheckinFromBooking: async () => {
+   confirmCheckinFromBooking: async () => {
     // 1. Lấy ID lịch đặt từ modal đang mở
     const bookingId = document.getElementById('manage-b-id').value;
     if (!bookingId) return alert("Không tìm thấy mã lịch đặt!");
@@ -629,34 +642,104 @@ window.app = {
     try {
         const now = new Date();
         const currentTime = now.getHours().toString().padStart(2, '0') + ":" + now.getMinutes().toString().padStart(2, '0');
-
-        // 2. Khai báo biến lấy tiền cọc từ booking
         const depositAmount = Number(b.Tien_Coc || 0); 
 
         const courtUpdate = {
             Trang_Thai: "Đang chơi",
             Ten_Khach: b.Ten_Khach || "Khách đặt lịch",
             SDT: b.SDT || "",
-            Gio_Vao: currentTime,
+            Gio_Vao: currentTime,       // Giờ thực tế vào sân (vd: 07:30)
+            
+            // --- CÁC TRƯỜNG ĐỂ TÍNH TOÁN TIỀN GIỜ THEO LOGIC MỚI ---
+            Gio_Vao_Lich: b.Bat_Dau,    // Giờ bắt đầu theo lịch (vd: 08:00)
+            Gio_Ra_Lich: b.Ket_Thuc,    // Giờ kết thúc theo lịch (vd: 10:00)
+            Booking_ID: bookingId,      
+            // ----------------------------------------------------
+            
             Member_ID: b.Member_ID || "",
             Loai_Khach: b.Loai_Khach || "Vãng lai",
-            Da_Coc: depositAmount // QUAN TRỌNG: Lưu số tiền này vào dữ liệu sân
+            Da_Coc: depositAmount 
         };
 
-        
-        // 3. Cập nhật lên Firebase
+        // 2. Cập nhật dữ liệu vào Sân để bắt đầu tính tiền
         await window.update(window.ref(window.db, `courts/${b.Court_ID}`), courtUpdate);
         
-        // 4. Xóa lịch đặt trên timeline
+        // 3. XÓA LỊCH ĐẶT KHỎI FIREBASE (Để làm biến mất trên Timeline)
         await window.remove(window.ref(window.db, `bookings/${bookingId}`));
 
-        alert(`✅ Check-in thành công! (Tiền cọc: ${depositAmount.toLocaleString()}đ)`);
+        alert(`✅ Check-in thành công!\n- Vào lúc: ${currentTime}\n- Khung giờ đặt: ${b.Bat_Dau} - ${b.Ket_Thuc}`);
         window.ui.closeModal('manage-booking');
         
     } catch (e) {
         console.error("Lỗi Check-in:", e);
         alert("Lỗi: " + e.message);
     }
+},
+// Hàm tính toán thời gian sử dụng sân Pickleball thông minh
+calculatePickleballFinalTime: (court) => {
+    // 1. Lấy thời gian vào thực tế (lúc bấm check-in)
+    const realIn = court.Gio_Vao; 
+    
+    // 2. Lấy thời gian ra thực tế (giờ hiện tại hệ thống)
+    const now = new Date();
+    const realOut = now.getHours().toString().padStart(2, '0') + ":" + 
+                    now.getMinutes().toString().padStart(2, '0');
+    
+    // 3. Lấy mốc lịch đặt ban đầu (đã được lưu khi bấm check-in từ booking)
+    const bookIn = court.Gio_Vao_Lich; 
+    const bookOut = court.Gio_Ra_Lich;
+
+    let totalMins = 0;
+    let detail = "";
+
+    // TRƯỜNG HỢP: KHÁCH CÓ LỊCH ĐẶT TRƯỚC
+    if (bookIn && bookOut) {
+        // A. Tính phút vào sớm: Nếu giờ vào thực tế < giờ bắt đầu trong lịch
+        let earlyMins = 0;
+        if (realIn < bookIn) {
+            earlyMins = app.diffMinutes(realIn, bookIn);
+        }
+
+        // B. Phút trong lịch đặt: Luôn tính đủ thời gian đã cam kết đặt
+        // Đây chính là mốc tối thiểu khách phải trả dù ra sớm hơn bookOut
+        const bookingMins = app.diffMinutes(bookIn, bookOut);
+
+        // C. Phút chơi lố: Chỉ tính nếu giờ ra thực tế > giờ kết thúc trong lịch
+        let lateMins = 0;
+        if (realOut > bookOut) {
+            lateMins = app.diffMinutes(bookOut, realOut);
+        }
+
+        // Tổng cộng phút tính tiền
+        totalMins = earlyMins + bookingMins + lateMins;
+        
+        // Chuỗi diễn giải để hiện lên hóa đơn cho minh bạch
+        detail = `${earlyMins > 0 ? 'Sớm ' + earlyMins + 'p + ' : ''}${bookingMins}p lịch đặt${lateMins > 0 ? ' + Lố ' + lateMins + 'p' : ''}`;
+    } 
+    // TRƯỜNG HỢP: KHÁCH VÃNG LAI (KHÔNG CÓ LỊCH ĐẶT)
+    else {
+        totalMins = app.diffMinutes(realIn, realOut);
+        detail = "Khách vãng lai (Tính thực tế)";
+    }
+
+    return { 
+        totalMins: totalMins, 
+        detail: detail, 
+        realOut: realOut 
+    };
+},
+
+// Hàm tính chênh lệch phút (đảm bảo hàm này có sẵn trong app-logic.js)
+diffMinutes: (start, end) => {
+    if (!start || !end) return 0;
+    const s = start.split(':');
+    const e = end.split(':');
+    const startTotal = parseInt(s[0]) * 60 + parseInt(s[1]);
+    const endTotal = parseInt(e[0]) * 60 + parseInt(e[1]);
+    
+    const diff = endTotal - startTotal;
+    // Xử lý trường hợp chơi xuyên đêm (ví dụ vào 23:00 ra 01:00)
+    return diff < 0 ? diff + 1440 : diff; 
 },
 
 // --- HÀM NHẬN SÂN NHANH (CHECK-IN CHO KHÁCH VÃNG LAI) ---
@@ -1102,21 +1185,17 @@ editService: (id) => {
         
         const billsData = window.dataCache?.bills || {};
 
-        // --- GIẢI PHÁP 1: CHỜ SESSION SẴN SÀNG ---
         const userJson = sessionStorage.getItem('pms_user');
         if (!userJson) {
-            // Nếu chưa có session, thử lại sau 250ms để nút xóa kịp hiện
             setTimeout(() => app.renderBills(), 250);
         }
         
         const currentUser = userJson ? JSON.parse(userJson) : {};
-        // --- GIẢI PHÁP 2: CHUẨN HÓA QUYỀN (toLowerCase) ---
         const role = String(currentUser.Role || '').toLowerCase().trim();
         const canDelete = (role === 'admin' || role === 'quanly');
 
         let tH = ''; 
 
-        // --- SẮP XẾP LOGIC (MỚI NHẤT LÊN ĐẦU) ---
         const entries = Object.entries(billsData).sort((a, b) => {
             const timeA = new Date(a[1].Ngay_Thang + ' ' + (a[1].Thoi_Gian?.split(' ')[0].includes(':') ? a[1].Thoi_Gian.split(' ')[0] : (a[1].Thoi_Gian?.split(' ')[1] || "00:00:00")));
             const timeB = new Date(b[1].Ngay_Thang + ' ' + (b[1].Thoi_Gian?.split(' ')[0].includes(':') ? b[1].Thoi_Gian.split(' ')[0] : (b[1].Thoi_Gian?.split(' ')[1] || "00:00:00")));
@@ -1142,21 +1221,34 @@ editService: (id) => {
             noiDungHienThi = noiDungHienThi.replace(/S\d{13}/g, "").replace(/\s+/g, " ").trim();
 
             const name = String(b.Khach_Hang || "Khách lẻ");
-            const matchSearch = !search || name.toLowerCase().includes(search) || noiDungHienThi.toLowerCase().includes(search);
+            const billCode = String(b.Ma_Don || ""); // Lấy mã đơn
+
+            // BỔ SUNG: Cho phép tìm kiếm theo cả Tên khách, Nội dung và Mã đơn
+            const matchSearch = !search || 
+                               name.toLowerCase().includes(search) || 
+                               noiDungHienThi.toLowerCase().includes(search) ||
+                               billCode.toLowerCase().includes(search);
 
             if (matchDate && matchSearch) {
                 const money = Number(b.Tong_Tien || 0);
                 const moneyColor = money < 0 ? 'text-rose-600' : 'text-blue-600';
 
                 tH += `
-                <tr class="border-b border-slate-50 hover:bg-slate-50/50 transition-all font-bold text-sm">
+                <tr class="border-b border-slate-50 hover:bg-blue-50/30 transition-all font-bold text-sm">
                     <td class="p-4 text-slate-500 text-[11px] whitespace-nowrap">${ngayHienThi}</td>
+                    
+                    <td class="p-4">
+                        <span class="px-2 py-1 rounded-lg bg-blue-50 text-blue-600 text-[10px] font-black uppercase border border-blue-100 shadow-sm">
+                            ${billCode || 'KĐ-CHƯA-MÃ'}
+                        </span>
+                    </td>
+
                     <td class="p-4">
                         <div class="uppercase text-slate-800">${name}</div>
                         <div class="text-[10px] text-blue-500 italic font-medium">${b.SDT || ''}</div>
                     </td>
-                    <td class="p-4 text-slate-500 font-medium max-w-[400px]">
-                        <div class="text-[11px] leading-relaxed">${noiDungHienThi}</div>
+                    <td class="p-4 text-slate-500 font-medium max-w-[300px]">
+                        <div class="text-[11px] leading-relaxed truncate" title="${noiDungHienThi}">${noiDungHienThi}</div>
                     </td>
                     <td class="p-4 text-center">
                         <span class="px-2 py-1 rounded-lg bg-slate-100 text-slate-600 text-[10px] uppercase font-black whitespace-nowrap">${b.PTTT || 'TM'}</span>
@@ -1164,7 +1256,7 @@ editService: (id) => {
                     <td class="p-4 text-right ${moneyColor} font-black whitespace-nowrap">${money.toLocaleString()}đ</td>
                     <td class="p-4 text-right">
                         <div class="flex justify-end gap-2">
-                            <button onclick="app.reprintBill('${id}')" class="p-2 text-slate-400 hover:text-blue-500 transition-colors" title="In lại">
+                            <button onclick="app.reprintBill('${id}')" class="p-2 text-slate-300 hover:text-blue-500 transition-colors" title="In lại">
                                 <i class="fa-solid fa-print text-xs"></i>
                             </button>
                             
@@ -1179,7 +1271,8 @@ editService: (id) => {
             }
         });
 
-        tableBody.innerHTML = tH || '<tr><td colspan="6" class="p-10 text-center italic text-slate-400">Không tìm thấy hóa đơn phù hợp</td></tr>';
+        // Cập nhật số cột colspan thành 7 vì đã thêm 1 cột
+        tableBody.innerHTML = tH || '<tr><td colspan="7" class="p-10 text-center italic text-slate-400">Không tìm thấy hóa đơn phù hợp</td></tr>';
         
     } catch (error) { console.error("Lỗi RenderBills:", error); }
 },
@@ -2280,7 +2373,11 @@ cancelCourtRequest: async () => {
         const sdtKhach = court.SDT || ""; 
         const memberIdOnCourt = court.Member_ID;
 
-        // Xác định ID duy nhất
+        // --- BỔ SUNG: LẤY MÃ ĐƠN TỪ GIAO DIỆN ĐỂ HẾT LỖI ---
+        const billCode = document.getElementById('display-bill-code')?.innerText || ("SB-" + Date.now().toString().slice(-6));
+        // -------------------------------------------------
+
+        // Xác định ID khách hàng duy nhất
         let finalId = memberIdOnCourt || court.Cust_ID;
         if (!finalId && sdtKhach && sdtKhach !== "---") {
             finalId = sdtKhach; 
@@ -2335,6 +2432,7 @@ cancelCourtRequest: async () => {
         finalUpdates[`bills/${billId}`] = {
             Id: billId,
             Thoi_Gian: thoiGianHienTai,
+            Ma_Don: billCode, // Đã có biến billCode ở trên
             Ngay_Thang: ngayHomNay,
             Khach_Hang: khachHang,
             SDT: sdtKhach,
@@ -2352,16 +2450,17 @@ cancelCourtRequest: async () => {
             Loai: 'Thu',
             Doi_Tuong: khachHang,
             So_Tien: total,
-            PTTT: method === "Ví hội viên" ? "Chuyển khoản" : method, // Ví hội viên quy về dòng tiền không mặt
-            Noi_Dung: `Thu tiền hóa đơn sân: ${court.Ten_San || inputId} (${method})`,
+            PTTT: method === "Ví hội viên" ? "Chuyển khoản" : method,
+            Noi_Dung: `Thu tiền hóa đơn sân: ${court.Ten_San || inputId} (${method}) - Mã đơn: ${billCode}`,
             Ngay: ngayHomNay,
             Thoi_Gian: thoiGianHienTai,
             Nhan_Vien: window.currentUser ? window.currentUser.User : "Hệ thống",
-            Bill_Id: billId
+            Bill_Id: billId,
+            Ma_Don: billCode // Lưu thêm trường mã đơn để đối soát
         };
 
         // C. Reset sân
-        const courtReset = { Trang_Thai: "Sẵn sàng", Ten_Khach: "", SDT: "", Cust_ID: null, Member_ID: null, Gio_Vao: "", Da_Coc: 0, Playing: null, Dich_Vu: null };
+        const courtReset = { Trang_Thai: "Sẵn sàng", Ten_Khach: "", SDT: "", Cust_ID: null, Member_ID: null, Gio_Vao: "", Da_Coc: 0, Playing: null, Dich_Vu: null, Gio_Vao_Lich: null, Gio_Ra_Lich: null };
         Object.keys(courtReset).forEach(key => { finalUpdates[`courts/${inputId}/${key}`] = courtReset[key]; });
 
         // D. CẬP NHẬT CHI TIÊU KHÁCH HÀNG
@@ -2382,7 +2481,7 @@ cancelCourtRequest: async () => {
             };
         }
 
-        // Thực thi tất cả updates trong 1 lần gửi duy nhất (Atomically)
+        // Thực thi updates
         await window.update(window.ref(window.db), finalUpdates);
 
         // 5. TỰ ĐỘNG THĂNG HẠNG (Chỉ cho Hội viên)
@@ -2392,7 +2491,9 @@ cancelCourtRequest: async () => {
                 if (m) {
                     const totalSpent = Number(m.Tong_Chi_Tieu) || 0;
                     const conf = window.dataCache.config || {};
-                    if (totalSpent >= (conf.rankGold || 10000000)) m.Hang_HV = "Vàng";
+                    // Logic thăng hạng linh hoạt theo config mới
+                    if (totalSpent >= (conf.rankDiamond || 20000000)) m.Hang_HV = "Kim cương";
+                    else if (totalSpent >= (conf.rankGold || 10000000)) m.Hang_HV = "Vàng";
                     else if (totalSpent >= (conf.rankSilver || 5000000)) m.Hang_HV = "Bạc";
                 }
                 return m;
@@ -2405,7 +2506,7 @@ cancelCourtRequest: async () => {
         setTimeout(() => { 
             if (confirm("✅ Thanh toán thành công! Đã tự động ghi sổ quỹ. In hóa đơn chứ?")) { 
                 window.handlePrintOrder?.({ 
-                    Id: billId.toString().slice(-8), 
+                    Id: billCode, // Sử dụng mã đơn thay vì ID hệ thống để in cho khách chuyên nghiệp
                     Items: billItems.map(i => ({ name: i.Ten, qty: i.SL, price: i.Gia })), 
                     Total: total, 
                     Customer: khachHang 
@@ -2618,80 +2719,103 @@ selectMemberForPOS: (id, name) => {
     console.log("✅ Đã chọn hội viên POS thành công:", name);
 },
 // 1. Hàm tính toán lại mọi con số khi thay đổi số tiền
-recalculatePosFinal: () => {
-    // Lấy các giá trị đầu vào
-    const subtotal = Number(document.getElementById('pos-calc-subtotal').getAttribute('data-value') || 0);
-    const rankPercent = Number(document.getElementById('pos-rank-discount-percent').innerText || 0);
-    const manualDisc = Number(document.getElementById('pos-manual-discount').value || 0);
-    const cashReceived = Number(document.getElementById('pos-cash-received').value || 0);
+recalculatePosFinal: (type) => {
+    // 1. Lấy các phần tử DOM
+    const subtotalEl = document.getElementById('pos-calc-subtotal');
+    const inputCash = document.getElementById('pos-manual-discount');
+    const inputPercent = document.getElementById('pos-manual-percent');
+    const cashReceivedInput = document.getElementById('pos-cash-received');
+    const displayTotal = document.getElementById('pos-display-total');
+    const displayChange = document.getElementById('pos-cash-change');
+    const methodSelect = document.getElementById('pos-method-select');
 
-    // Tính tiền giảm theo hạng
-    const rankDiscMoney = Math.round(subtotal * rankPercent / 100);
-    
-    // Tính tổng thanh toán cuối cùng
-    const finalTotal = Math.max(0, subtotal - rankDiscMoney - manualDisc);
+    // 2. Lấy giá trị số
+    const subtotal = Number(subtotalEl.getAttribute('data-value') || 0);
+    const cashReceived = Number(cashReceivedInput.value || 0);
+
+    // 3. LOGIC GIẢM GIÁ LINH HOẠT (Gõ ô này nhảy ô kia)
+    if (type === 'percent') {
+        // Nếu người dùng nhập %, tính ra số tiền tương ứng
+        const p = Number(inputPercent.value || 0);
+        inputCash.value = Math.round((p * subtotal) / 100);
+    } else if (type === 'cash') {
+        // Nếu người dùng nhập số tiền, tính ngược ra % để hiển thị
+        const c = Number(inputCash.value || 0);
+        inputPercent.value = subtotal > 0 ? ((c / subtotal) * 100).toFixed(1) : 0;
+    }
+
+    // 4. TÍNH TỔNG THANH TOÁN CUỐI CÙNG
+    // Giảm giá theo hạng đã bị loại bỏ, chỉ dùng manualDisc (số tiền giảm tay)
+    const manualDisc = Number(inputCash.value || 0);
+    const finalTotal = Math.max(0, subtotal - manualDisc);
     
     // Hiển thị tổng mới
-    document.getElementById('pos-display-total').innerText = finalTotal.toLocaleString() + 'đ';
-    document.getElementById('pos-display-total').setAttribute('data-final', finalTotal);
+    displayTotal.innerText = finalTotal.toLocaleString() + 'đ';
+    displayTotal.setAttribute('data-final', finalTotal);
 
-    // Tính tiền thối lại
+    // 5. TÍNH TIỀN THỐI LẠI
     const change = Math.max(0, cashReceived - finalTotal);
-    document.getElementById('pos-cash-change').innerText = cashReceived > 0 ? change.toLocaleString() + 'đ' : '0đ';
+    displayChange.innerText = cashReceived > 0 ? change.toLocaleString() + 'đ' : '0đ';
     
-    // Hiệu ứng cảnh báo nếu khách đưa thiếu tiền mặt
-    if (cashReceived > 0 && cashReceived < finalTotal && document.getElementById('pos-method-select').value === "Tiền mặt") {
-        document.getElementById('pos-cash-change').className = "text-sm font-bold text-rose-500 italic";
-        document.getElementById('pos-cash-change').innerText = "Đưa thiếu: " + (finalTotal - cashReceived).toLocaleString() + "đ";
+    // 6. HIỆU ỨNG CẢNH BÁO TIỀN MẶT
+    if (cashReceived > 0 && cashReceived < finalTotal && methodSelect.value === "Tiền mặt") {
+        displayChange.className = "text-sm font-bold text-rose-500 italic";
+        displayChange.innerText = "Đưa thiếu: " + (finalTotal - cashReceived).toLocaleString() + "đ";
     } else {
-        document.getElementById('pos-cash-change').className = "text-lg font-black text-orange-600";
+        displayChange.className = "text-lg font-black text-orange-600";
     }
 },
-
 // 2. Hàm khi mở Modal (checkoutPos) - Cập nhật dữ liệu ban đầu
 checkoutPos: async () => {
     if (!window.posCart || window.posCart.length === 0) return alert("🛒 Giỏ hàng trống!");
 
+    // 1. Lấy thông tin khách hàng (chỉ để hiển thị tên, không lấy hạng để giảm giá)
     const memberId = document.getElementById('pos-member-id')?.value;
     const customerName = document.getElementById('pos-customer-search')?.value || "Khách lẻ";
     const subtotal = window.posCart.reduce((s, i) => s + (i.price * i.qty), 0);
 
-    // Lấy % giảm giá dựa trên hạng hội viên
-    let discountPercent = 0;
-    let rankName = "Đồng";
-    if (memberId && window.dataCache.members[memberId]) {
-        const member = window.dataCache.members[memberId];
-        rankName = member.Hang_HV || 'Đồng';
-        const conf = window.dataCache.config || {};
-        const rankKey = rankName === 'Vàng' ? 'mGold' : rankName === 'Bạc' ? 'mSilver' : 'mCopper';
-        discountPercent = Number(conf[rankKey] || 0);
+    // 2. Đổ dữ liệu vào Modal (Dùng optional chaining ?. để tránh lỗi nếu thiếu ID)
+    const displayNameEl = document.getElementById('pos-display-name');
+    if (displayNameEl) displayNameEl.innerText = "Khách: " + customerName;
+
+    const subtotalEl = document.getElementById('pos-calc-subtotal');
+    if (subtotalEl) {
+        subtotalEl.innerText = subtotal.toLocaleString() + 'đ';
+        subtotalEl.setAttribute('data-value', subtotal);
     }
 
-    // Đổ dữ liệu vào Modal
-    document.getElementById('pos-display-name').innerText = "Khách: " + customerName;
-    document.getElementById('pos-calc-subtotal').innerText = subtotal.toLocaleString() + 'đ';
-    document.getElementById('pos-calc-subtotal').setAttribute('data-value', subtotal);
-    document.getElementById('pos-rank-name').innerText = "Hạng: " + rankName;
-    document.getElementById('pos-rank-discount-percent').innerText = discountPercent;
-    document.getElementById('pos-manual-discount').value = 0;
-    document.getElementById('pos-cash-received').value = "";
+    // --- QUAN TRỌNG: ĐÃ LOẠI BỎ CÁC DÒNG GÂY LỖI (pos-rank-name, pos-rank-discount-percent) ---
+
+    // 3. Reset các ô nhập liệu về trạng thái trống/mặc định
+    const manualDiscount = document.getElementById('pos-manual-discount');
+    const manualPercent = document.getElementById('pos-manual-percent');
+    const cashReceived = document.getElementById('pos-cash-received');
+    const methodSelect = document.getElementById('pos-method-select');
+
+    if (manualDiscount) manualDiscount.value = 0;
+    if (manualPercent) manualPercent.value = ""; // Để trống ô % để người dùng tự nhập
+    if (cashReceived) cashReceived.value = "";
     
-    // Reset phương thức về Tiền mặt
-    document.getElementById('pos-method-select').value = "Tiền mặt";
-    document.getElementById('pos-cash-area').classList.remove('hidden');
-    document.getElementById('pos-wallet-view').classList.add('hidden');
+    // 4. Reset phương thức thanh toán
+    if (methodSelect) {
+        methodSelect.value = "Tiền mặt";
+        document.getElementById('pos-cash-area')?.classList.remove('hidden');
+        document.getElementById('pos-wallet-view')?.classList.add('hidden');
+    }
 
-    // Hiện modal
-    document.getElementById('modal-pos-checkout').classList.remove('hidden');
-    document.getElementById('modal-pos-checkout').style.display = 'flex';
+    // 5. Hiện modal
+    const modal = document.getElementById('modal-pos-checkout');
+    if (modal) {
+        modal.classList.remove('hidden');
+        modal.style.display = 'flex';
+    }
 
-    // Tính toán phát đầu tiên
+    // 6. Tính toán phát đầu tiên (Mặc định giảm giá = 0)
     app.recalculatePosFinal();
 
-    // Gán nút xác nhận
-    document.getElementById('btn-pos-final').onclick = () => app.processFinalPos(subtotal, discountPercent, customerName, memberId);
+    // 7. Gán nút xác nhận (discountPercent truyền vào là 0 vì không tự động giảm)
+    document.getElementById('btn-pos-final').onclick = () => app.processFinalPos(subtotal, 0, customerName, memberId);
 },
-
 // 3. Xử lý ẩn hiện phần tiền khách đưa khi chọn phương thức
 handlePosMethodChange: () => {
     const method = document.getElementById('pos-method-select').value;
@@ -2722,13 +2846,16 @@ processFinalPos: async (subtotal, rankDiscPercent, customerName, memberId) => {
         const method = document.getElementById('pos-method-select').value;
         const manualDisc = Number(document.getElementById('pos-manual-discount')?.value || 0);
         
-        const rankDiscMoney = Math.round(subtotal * rankDiscPercent / 100);
-        const totalAmount = Math.max(0, subtotal - rankDiscMoney - manualDisc);
+        // LẤY MÃ ĐƠN ĐÃ TẠO LÚC MỞ MODAL (từ thuộc tính data-code)
+        const billCode = document.getElementById('pos-display-bill-code')?.getAttribute('data-code') || ("POS-" + Date.now().toString().slice(-6));
+        
+        // Tính toán tổng tiền (Đã bỏ rankDiscPercent vì bán lẻ nhập tay manualDisc)
+        const totalAmount = Math.max(0, subtotal - manualDisc);
 
         const updates = {}; 
         const now = new Date();
         const timestamp = Date.now();
-        const bId = 'BILL-POS-' + timestamp;
+        const bId = 'BILL-POS-' + timestamp; // ID hệ thống để làm Key
         const ngayHomNay = now.toISOString().split('T')[0];
         const thoiGianVN = now.toLocaleString('vi-VN');
 
@@ -2742,38 +2869,43 @@ processFinalPos: async (subtotal, rankDiscPercent, customerName, memberId) => {
             updates[`members/${memberId}/Vi_Du`] = currentBalance - totalAmount;
         }
 
-        // 2. CẬP NHẬT TỒN KHO
+        // 2. CẬP NHẬT TỒN KHO (Giữ nguyên logic cũ)
         window.posCart.forEach(item => {
             const product = window.dataCache.services[item.id];
             if (product && product.Loai_DV !== "DỊCH VỤ") {
-                updates[`services/${item.id}/Ton_Kho`] = Number(product.Ton_Kho);
+                const currentStock = Number(product.Ton_Kho || 0);
+                updates[`services/${item.id}/Ton_Kho`] = Math.max(0, currentStock - item.qty);
             }
         });
 
-        // 3. CẬP NHẬT TỔNG CHI TIÊU & HẠNG
-        if (memberId) {
+        // 3. CẬP NHẬT TỔNG CHI TIÊU & THĂNG HẠNG (Theo cấu hình mới)
+        if (memberId && memberId !== "KH_LE") {
             const member = window.dataCache.members[memberId];
             const newTotalSpend = (Number(member.Tong_Chi_Tieu) || 0) + totalAmount;
             updates[`members/${memberId}/Tong_Chi_Tieu`] = newTotalSpend;
 
             const conf = window.dataCache.config || {};
-            let newRank = "Đồng";
-            if (newTotalSpend >= (conf.rankGold || 15000000)) newRank = "Vàng";
+            let newRank = member.Hang_HV || "Đồng";
+            
+            // Cập nhật mốc hạng linh hoạt bao gồm Kim Cương
+            if (newTotalSpend >= (conf.rankDiamond || 20000000)) newRank = "Kim cương";
+            else if (newTotalSpend >= (conf.rankGold || 10000000)) newRank = "Vàng";
             else if (newTotalSpend >= (conf.rankSilver || 5000000)) newRank = "Bạc";
+            
             updates[`members/${memberId}/Hang_HV`] = newRank;
         }
 
-        // 4. CHUẨN BỊ DỮ LIỆU HÓA ĐƠN
+        // 4. CHUẨN BỊ DỮ LIỆU HÓA ĐƠN (Thêm Ma_Don)
         updates[`bills/${bId}`] = {
             Id: bId,
+            Ma_Don: billCode, // <--- LƯU MÃ ĐƠN ĐỂ HIỂN THỊ CỘT RIÊNG
             Khach_Hang: customerName,
             Member_ID: memberId || null,
             Tong_Tien: totalAmount,
             Tong_Goc: subtotal,
-            Giam_Gia_Rank: rankDiscMoney,
             Giam_Gia_Mat: manualDisc,
             PTTT: method,
-            Noi_Dung: (method === "Ví hội viên" ? "[VÍ] " : "") + "Bán lẻ: " + window.posCart.map(i => i.name).join(', '),
+            Noi_Dung: (method === "Ví hội viên" ? "[VÍ] " : "") + "Bán lẻ: " + window.posCart.map(i => `${i.name} (x${i.qty})`).join(', '),
             Items: window.posCart.map(i => ({ 
                 Ten: i.name, 
                 SL: i.qty, 
@@ -2784,41 +2916,45 @@ processFinalPos: async (subtotal, rankDiscPercent, customerName, memberId) => {
             Loai_HD: "Bán lẻ"
         };
 
-        // --- 🚀 MỚI: TỰ ĐỘNG TẠO PHIẾU THU VÀO SỔ QUỸ (LEDGER) ---
+        // 5. TỰ ĐỘNG TẠO PHIẾU THU VÀO SỔ QUỸ (LEDGER)
         const ledgerId = 'LG-' + timestamp;
         updates[`ledger/${ledgerId}`] = {
             Id: ledgerId,
             Loai: 'Thu',
             Doi_Tuong: customerName,
             So_Tien: totalAmount,
-            // Nếu dùng ví thì quỹ thật không tăng tiền mặt -> Quy về Chuyển khoản để khớp két
             PTTT: method === "Ví hội viên" ? "Chuyển khoản" : method, 
-            Noi_Dung: `Thu tiền bán lẻ POS (${method}) - Mã đơn: ${bId}`,
+            Noi_Dung: `Thu tiền bán lẻ POS (${method}) - Mã đơn: ${billCode}`, // Dùng billCode đồng bộ
             Ngay: ngayHomNay,
             Thoi_Gian: thoiGianVN,
             Nhan_Vien: window.currentUser ? window.currentUser.User : "Hệ thống",
-            Bill_Id: bId
+            Bill_Id: bId,
+            Ma_Don: billCode // Lưu thêm Ma_Don vào ledger để đối soát
         };
 
-        // 5. THỰC THI GHI DỮ LIỆU TỔNG THỂ
+        // 6. THỰC THI GHI DỮ LIỆU TỔNG THỂ
         await window.update(window.ref(window.db), updates);
 
-        // 6. RESET GIAO DIỆN
+        // 7. RESET GIAO DIỆN
         window.posCart = [];
-        app.renderPOSCart();
-        app.renderPosProducts(); 
+        if (app.renderPOSCart) app.renderPOSCart();
+        if (app.renderPosProducts) app.renderPosProducts(); 
 
         const modal = document.getElementById('modal-pos-checkout');
-        if (modal) modal.style.display = 'none'; 
+        if (modal) {
+            modal.style.display = 'none';
+            modal.classList.add('hidden');
+        }
         
         const searchInput = document.getElementById('pos-customer-search');
         if (searchInput) {
             searchInput.value = "";
             searchInput.classList.remove('text-blue-500', 'font-black');
-            document.getElementById('pos-member-id').value = ""; // Clear luôn hidden ID
+            const hiddenId = document.getElementById('pos-member-id');
+            if (hiddenId) hiddenId.value = "";
         }
         
-        alert(`✅ Thanh toán thành công & Đã ghi Sổ quỹ!`);
+        alert(`✅ Thanh toán thành công!\nMã đơn: ${billCode}`);
 
     } catch (e) { 
         console.error("Lỗi processFinalPos:", e);
@@ -4086,6 +4222,116 @@ bookingManager: {
             });
     }
 },
+// Thêm khung giờ mới
+addTimeSlot: () => {
+    const start = document.getElementById('slot-start').value;
+    const end = document.getElementById('slot-end').value;
+    const price = Number(document.getElementById('slot-price').value || 0);
+
+    if (!start || !end) return alert("Vui lòng chọn đủ giờ!");
+    if (start >= end) return alert("Giờ bắt đầu phải nhỏ hơn giờ kết thúc!");
+
+    window.tempTimeSlots = window.tempTimeSlots || [];
+    window.tempTimeSlots.push({ start, end, price });
+    
+    app.renderTimeSlots();
+},
+
+// Xóa khung giờ
+deleteTimeSlot: (index) => {
+    window.tempTimeSlots.splice(index, 1);
+    app.renderTimeSlots();
+},
+
+// Vẽ danh sách khung giờ
+renderTimeSlots: () => {
+    const slots = window.tempTimeSlots || window.dataCache.config?.timeSlots || [];
+    window.tempTimeSlots = slots; // Đồng bộ
+    
+    const container = document.getElementById('time-slots-container');
+    if (!container) return;
+
+    container.innerHTML = slots.map((s, index) => `
+        <div class="flex items-center justify-between bg-slate-50 p-3 rounded-xl border border-slate-100">
+            <div class="flex items-center gap-2">
+                <span class="text-[11px] font-black text-slate-700 uppercase">${s.start} - ${s.end}</span>
+                <span class="text-[10px] font-bold text-rose-500 italic">+${s.price.toLocaleString()}đ/h</span>
+            </div>
+            <button onclick="app.deleteTimeSlot(${index})" class="text-slate-300 hover:text-rose-500"><i class="fa-solid fa-circle-xmark"></i></button>
+        </div>
+    `).join('') || '<p class="text-center text-[10px] text-slate-300 italic py-2">Chưa có khung giờ phụ phí</p>';
+},
+
+// Cập nhật lại hàm saveFullConfig
+saveFullConfig: async () => {
+    const priceInputs = document.querySelectorAll('.price-config-input');
+    const priceList = {};
+    priceInputs.forEach(input => {
+        priceList[input.dataset.type] = Number(input.value);
+    });
+
+    const configData = {
+        priceList: priceList,
+        timeSlots: window.tempTimeSlots || [], // Lưu danh sách khung giờ
+        weekendUp: Number(document.getElementById('conf-weekend-up').value),
+        mCopper: Number(document.getElementById('conf-m-copper').value),
+        mSilver: Number(document.getElementById('conf-m-silver').value),
+        mGold: Number(document.getElementById('conf-m-gold').value),
+        mDiamond: Number(document.getElementById('conf-m-diamond').value),
+        rankSilver: Number(document.getElementById('conf-rank-silver').value),
+        rankGold: Number(document.getElementById('conf-rank-gold').value),
+        rankDiamond: Number(document.getElementById('conf-rank-diamond').value)
+    };
+
+    await window.set(window.ref(window.db, 'config'), configData);
+    alert("✅ Đã lưu cấu hình khung giờ và giá thành công!");
+},
+
+// Thêm vào trong đối tượng window.app
+handlePaymentMethodChange: () => {
+    const methodEl = document.getElementById('payment-method-select');
+    const walletView = document.getElementById('checkout-wallet-view');
+    const balanceEl = document.getElementById('checkout-wallet-balance');
+    
+    if (!methodEl || !walletView || !balanceEl) return;
+
+    const method = methodEl.value;
+    
+    if (method === "Ví hội viên") {
+        walletView.classList.remove('hidden');
+        
+        // 1. Lấy ID sân đang chọn từ biến toàn cục
+        const currentId = window.selectedCourtId; 
+        const court = window.dataCache?.courts ? window.dataCache.courts[currentId] : null;
+        
+        // 2. Lấy Member_ID từ dữ liệu sân
+        const memberId = court?.Member_ID;
+        
+        if (memberId && window.dataCache?.members && window.dataCache.members[memberId]) {
+            const member = window.dataCache.members[memberId];
+            const balance = Number(member.Vi_Du || 0);
+            
+            // Lấy tổng tiền cần thanh toán từ ô input ẩn
+            const totalToPay = Number(document.getElementById('temp-bill-total')?.value || 0);
+            
+            balanceEl.innerText = balance.toLocaleString() + "đ";
+
+            // Cảnh báo màu đỏ nếu số dư nhỏ hơn số tiền cần thu
+            if (balance < totalToPay) {
+                balanceEl.className = "font-[900] text-rose-600 text-base animate-pulse";
+                balanceEl.innerText += " (Không đủ số dư)";
+            } else {
+                balanceEl.className = "font-[900] text-emerald-800 text-base";
+            }
+        } else {
+            balanceEl.innerText = "Sân chưa gắn hội viên!";
+            balanceEl.className = "font-[900] text-rose-500 text-xs italic";
+        }
+    } else {
+        walletView.classList.add('hidden');
+    }
+},
+
 };
 
 // --- LOGIC SỔ QUỸ ---
