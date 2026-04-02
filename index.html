@@ -602,6 +602,7 @@ nav .overflow-x-auto::-webkit-scrollbar {
                     <thead>
                         <tr class="bg-slate-50/50 border-b border-slate-100">
                             <th class="p-5 text-[10px] font-black uppercase text-slate-400 tracking-widest">Thời gian</th>
+                            <th class="p-5 text-[10px] font-black uppercase text-slate-400 tracking-widest">Mã đơn</th>
                             <th class="p-5 text-[10px] font-black uppercase text-slate-400 tracking-widest">Khách hàng</th>
                             <th class="p-5 text-[10px] font-black uppercase text-slate-400 tracking-widest">Nội dung giao dịch</th>
                             <th class="p-5 text-[10px] font-black uppercase text-slate-400 tracking-widest text-center">PTTT</th>
@@ -672,9 +673,9 @@ nav .overflow-x-auto::-webkit-scrollbar {
 </div>
 
         <div id="tab-config" class="tab-content p-4 pb-24">
-    <div class="max-w-5xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-6">
+    <div class="max-w-[1200px] mx-auto grid grid-cols-1 lg:grid-cols-2 gap-8">
         
-        <div class="space-y-4">
+        <div class="space-y-6">
             <div class="bg-white rounded-3xl p-6 shadow-sm border border-slate-100">
                 <h3 class="font-black text-blue-600 uppercase italic mb-4 text-sm flex items-center gap-2">
                     <i class="fa-solid fa-tags"></i> Giá thuê theo loại sân
@@ -685,79 +686,88 @@ nav .overflow-x-auto::-webkit-scrollbar {
 
             <div class="bg-white rounded-3xl p-6 shadow-sm border border-slate-100">
                 <h3 class="font-black text-rose-500 uppercase italic mb-4 text-sm flex items-center gap-2">
-                    <i class="fa-solid fa-clock"></i> Giờ vàng & Cuối tuần
+                    <i class="fa-solid fa-clock"></i> Cấu hình Khung giờ & Phụ phí
                 </h3>
-                <div class="grid grid-cols-2 gap-4 mb-4">
-                    <div>
-                        <label class="text-[10px] font-black uppercase text-slate-400 pl-2">Bắt đầu</label>
-                        <input id="conf-peak-start" type="time" class="w-full bg-slate-50 rounded-2xl p-4 font-bold outline-none border border-slate-100">
+                
+                <div class="grid grid-cols-11 gap-2 mb-4 bg-slate-50 p-3 rounded-2xl border border-dashed border-slate-200">
+                    <div class="col-span-3">
+                        <label class="text-[9px] font-black uppercase text-slate-400 pl-1">Từ</label>
+                        <input id="slot-start" type="time" class="w-full bg-white rounded-xl p-2 text-xs font-bold outline-none border">
                     </div>
-                    <div>
-                        <label class="text-[10px] font-black uppercase text-slate-400 pl-2">Phụ phí (đ/h)</label>
-                        <input id="conf-price-peak" type="number" class="w-full bg-slate-50 rounded-2xl p-4 font-bold outline-none border border-slate-100">
+                    <div class="col-span-3">
+                        <label class="text-[9px] font-black uppercase text-slate-400 pl-1">Đến</label>
+                        <input id="slot-end" type="time" class="w-full bg-white rounded-xl p-2 text-xs font-bold outline-none border">
+                    </div>
+                    <div class="col-span-3">
+                        <label class="text-[9px] font-black uppercase text-slate-400 pl-1">Phụ phí</label>
+                        <input id="slot-price" type="number" placeholder="đ/h" class="w-full bg-white rounded-xl p-2 text-xs font-bold outline-none border">
+                    </div>
+                    <div class="col-span-2 flex items-end">
+                        <button onclick="app.addTimeSlot()" class="w-full bg-slate-900 text-white h-[34px] rounded-xl text-xs shadow-sm active:scale-95 transition-all">
+                            <i class="fa-solid fa-plus"></i>
+                        </button>
                     </div>
                 </div>
-                <div>
-                    <label class="text-[10px] font-black uppercase text-slate-400 pl-2">Tăng giá cuối tuần (%)</label>
-                    <input id="conf-weekend-up" type="number" class="w-full bg-slate-50 rounded-2xl p-4 font-bold outline-none border border-slate-100">
+
+                <div id="time-slots-container" class="space-y-2 max-h-40 overflow-y-auto pr-1 mb-4 custom-scrollbar">
+                    </div>
+
+                <div class="pt-4 border-t border-slate-50">
+                    <label class="text-[10px] font-black uppercase text-slate-400 pl-2 italic">Tăng giá cuối tuần (Thứ 7, CN) %</label>
+                    <input id="conf-weekend-up" type="number" class="w-full bg-slate-50 rounded-2xl p-4 font-[900] text-blue-600 outline-none border border-slate-100 mt-1" placeholder="0">
                 </div>
             </div>
         </div>
 
-        <div class="space-y-4">
-    <div class="bg-white rounded-3xl p-6 shadow-sm border border-slate-100 h-full">
-        <h3 class="font-black text-emerald-600 uppercase italic mb-4 text-sm flex items-center gap-2">
-            <i class="fa-solid fa-crown"></i> Ưu đãi & Thăng hạng
-        </h3>
-        
-        <div class="space-y-6">
-            <div>
-                <p class="text-[10px] font-black text-slate-300 uppercase mb-3 pl-1 italic">Mức giảm giá (%)</p>
-                <div class="grid grid-cols-4 gap-2">
-                    <div class="bg-slate-50 p-2 rounded-2xl border border-slate-100">
-                        <label class="text-[9px] font-black text-slate-400 uppercase text-center block mb-1">Đồng</label>
-                        <input id="conf-m-copper" type="number" class="w-full bg-transparent text-center font-black text-slate-700 outline-none">
-                    </div>
-                    <div class="bg-slate-50 p-2 rounded-2xl border border-slate-100">
-                        <label class="text-[9px] font-black text-slate-400 uppercase text-center block mb-1">Bạc</label>
-                        <input id="conf-m-silver" type="number" class="w-full bg-transparent text-center font-black text-blue-600 outline-none">
-                    </div>
-                    <div class="bg-slate-50 p-2 rounded-2xl border border-slate-100">
-                        <label class="text-[9px] font-black text-slate-400 uppercase text-center block mb-1">Vàng</label>
-                        <input id="conf-m-gold" type="number" class="w-full bg-transparent text-center font-black text-amber-500 outline-none">
-                    </div>
-                    <div class="bg-cyan-50 p-2 rounded-2xl border border-cyan-100">
-                        <label class="text-[9px] font-black text-cyan-600 uppercase text-center block mb-1">K.Cương</label>
-                        <input id="conf-m-diamond" type="number" class="w-full bg-transparent text-center font-black text-cyan-500 outline-none">
+        <div class="bg-white rounded-3xl p-8 shadow-sm border border-slate-100 h-full flex flex-col">
+            <h3 class="font-black text-emerald-600 uppercase italic mb-6 text-sm flex items-center gap-2">
+                <i class="fa-solid fa-crown"></i> Ưu đãi & Thăng hạng
+            </h3>
+            
+            <div class="space-y-8 flex-1">
+                <div>
+                    <p class="text-[10px] font-black text-slate-300 uppercase mb-4 pl-1 italic">Mức giảm giá (%)</p>
+                    <div class="grid grid-cols-4 gap-3">
+                        <div class="bg-slate-50 p-3 rounded-2xl border border-slate-100">
+                            <label class="text-[9px] font-black text-slate-400 uppercase text-center block mb-1">Đồng</label>
+                            <input id="conf-m-copper" type="number" class="w-full bg-transparent text-center font-[900] text-slate-700 outline-none">
+                        </div>
+                        <div class="bg-slate-50 p-3 rounded-2xl border border-slate-100">
+                            <label class="text-[9px] font-black text-slate-400 uppercase text-center block mb-1">Bạc</label>
+                            <input id="conf-m-silver" type="number" class="w-full bg-transparent text-center font-[900] text-blue-600 outline-none">
+                        </div>
+                        <div class="bg-slate-50 p-3 rounded-2xl border border-slate-100">
+                            <label class="text-[9px] font-black text-slate-400 uppercase text-center block mb-1">Vàng</label>
+                            <input id="conf-m-gold" type="number" class="w-full bg-transparent text-center font-[900] text-amber-500 outline-none">
+                        </div>
+                        <div class="bg-cyan-50/50 p-3 rounded-2xl border border-cyan-100">
+                            <label class="text-[9px] font-black text-cyan-600 uppercase text-center block mb-1">K.Cương</label>
+                            <input id="conf-m-diamond" type="number" class="w-full bg-transparent text-center font-[900] text-cyan-500 outline-none">
+                        </div>
                     </div>
                 </div>
-            </div>
 
-            <div>
-                <p class="text-[10px] font-black text-slate-300 uppercase mb-3 pl-1 italic">Mốc tích lũy (VNĐ)</p>
-                <div class="space-y-3">
+                <div class="space-y-4">
+                    <p class="text-[10px] font-black text-slate-300 uppercase mb-2 pl-1 italic">Mốc tích lũy thăng hạng (VNĐ)</p>
                     <div class="bg-slate-50 p-4 rounded-2xl border border-slate-100">
                         <label class="text-[9px] font-black text-slate-400 uppercase block mb-1">Lên hạng Bạc</label>
-                        <input id="conf-rank-silver" type="number" class="w-full bg-transparent font-black text-slate-700 outline-none text-lg">
+                        <input id="conf-rank-silver" type="number" class="w-full bg-transparent font-[900] text-slate-700 outline-none text-xl">
                     </div>
                     <div class="bg-slate-50 p-4 rounded-2xl border border-slate-100">
                         <label class="text-[9px] font-black text-slate-400 uppercase block mb-1">Lên hạng Vàng</label>
-                        <input id="conf-rank-gold" type="number" class="w-full bg-transparent font-black text-slate-700 outline-none text-lg">
+                        <input id="conf-rank-gold" type="number" class="w-full bg-transparent font-[900] text-slate-700 outline-none text-xl">
                     </div>
-                    <div class="bg-cyan-50/50 p-4 rounded-2xl border border-cyan-100">
+                    <div class="bg-cyan-50/30 p-4 rounded-2xl border border-cyan-100">
                         <label class="text-[9px] font-black text-cyan-600 uppercase block mb-1">Lên hạng Kim cương</label>
-                        <input id="conf-rank-diamond" type="number" class="w-full bg-transparent font-black text-cyan-600 outline-none text-lg">
+                        <input id="conf-rank-diamond" type="number" class="w-full bg-transparent font-[900] text-cyan-600 outline-none text-xl">
                     </div>
                 </div>
             </div>
 
-            <button onclick="app.saveFullConfig()" class="w-full bg-slate-900 text-white py-5 rounded-3xl font-black uppercase shadow-lg hover:bg-black transition-all mt-4">
-                <i class="fa-solid fa-check-double mr-2"></i> Lưu tất cả
+            <button onclick="app.saveFullConfig()" class="w-full bg-slate-900 text-white py-5 rounded-3xl font-black uppercase shadow-2xl hover:bg-black transition-all mt-8 active:scale-[0.98]">
+                <i class="fa-solid fa-check-double mr-2 text-emerald-400"></i> Lưu tất cả cấu hình
             </button>
         </div>
-    </div>
-</div>
-
     </div>
 </div>
 
@@ -1375,16 +1385,26 @@ nav .overflow-x-auto::-webkit-scrollbar {
         </div>
         
         <div class="mb-6">
-            <label class="text-[10px] font-black uppercase text-slate-400 ml-2">Phương thức thanh toán</label>
-            <select id="payment-method-select" class="w-full bg-slate-100 rounded-xl p-3 font-bold outline-none border-2 border-transparent focus:border-blue-500 mt-2 appearance-none">
-                <option value="Tiền mặt">💵 Tiền mặt</option>
-                <option value="Chuyển khoản">📲 Chuyển khoản</option>
-                <option value="Ví hội viên">💳 Ví hội viên (Trừ thẻ)</option>
-            </select>
-            
-            <input type="hidden" id="temp-bill-total" value="0">
-            <input type="hidden" id="manual-discount" value="0"> <input type="hidden" id="base-total-without-manual" value="0"> </div>
+    <label class="text-[10px] font-black uppercase text-slate-400 ml-2">Phương thức thanh toán</label>
+    <select id="payment-method-select" onchange="app.handlePaymentMethodChange()" 
+            class="w-full bg-slate-100 rounded-xl p-3 font-bold outline-none border-2 border-transparent focus:border-blue-500 mt-2 appearance-none cursor-pointer">
+        <option value="Tiền mặt">💵 Tiền mặt</option>
+        <option value="Chuyển khoản">📲 Chuyển khoản</option>
+        <option value="Ví hội viên">💳 Ví hội viên (Trừ thẻ)</option>
+    </select>
+    
+    <div id="checkout-wallet-view" class="hidden mt-3 p-4 bg-emerald-50 rounded-2xl border border-emerald-100 animate-fade-in">
+        <div class="flex justify-between items-center text-[9px] font-black text-emerald-400 uppercase mb-1">
+            <span>Số dư ví hiện tại</span>
+            <i class="fa-solid fa-id-card"></i>
+        </div>
+        <span id="checkout-wallet-balance" class="font-[900] text-emerald-800 text-base">0đ</span>
+    </div>
 
+    <input type="hidden" id="temp-bill-total" value="0">
+    <input type="hidden" id="manual-discount" value="0"> 
+    <input type="hidden" id="base-total-without-manual" value="0"> 
+</div>
         <button onclick="app.confirmPayment()" class="w-full bg-emerald-600 text-white py-5 rounded-2xl font-black uppercase shadow-xl hover:bg-emerald-700 transition-all active:scale-95">Xác nhận thanh toán</button>
         <button onclick="ui.closeModal('checkout')" class="w-full mt-4 text-[10px] font-black uppercase text-slate-300 tracking-widest">Quay lại</button>
     </div>
@@ -1393,44 +1413,47 @@ nav .overflow-x-auto::-webkit-scrollbar {
 <div id="modal-pos-checkout" class="fixed inset-0 bg-black/80 z-[9999] hidden items-center justify-center p-4 backdrop-blur-sm">
     <div class="bg-white rounded-[2.5rem] w-full max-w-md shadow-2xl overflow-hidden border border-slate-100">
         <div class="p-6 bg-slate-900 text-white text-center">
-            <h3 class="font-black uppercase italic tracking-widest text-blue-400">Xác nhận thanh toán</h3>
+            <h3 class="font-black uppercase italic tracking-widest text-blue-400">Xác nhận thanh toán POS</h3>
             <p id="pos-display-name" class="text-[10px] font-bold opacity-60 mt-1 uppercase tracking-tighter"></p>
         </div>
 
         <div class="p-8">
-            <div class="space-y-3 mb-6 bg-slate-50 p-5 rounded-[2rem] border border-slate-100">
+            <div class="space-y-4 mb-6 bg-slate-50 p-5 rounded-[2rem] border border-slate-100">
                 <div class="flex justify-between items-center text-slate-500">
                     <span class="text-[10px] font-black uppercase">Tổng tiền hàng:</span>
-                    <span id="pos-calc-subtotal" class="font-bold text-sm">0đ</span>
+                    <span id="pos-calc-subtotal" class="font-bold text-sm" data-value="0">0đ</span>
                 </div>
 
-                <div class="flex justify-between items-center text-emerald-600">
-                    <div class="flex flex-col">
-                        <span class="text-[10px] font-black uppercase">Giảm giá hạng khách:</span>
-                        <span id="pos-rank-name" class="text-[8px] italic opacity-70">Hạng: Đồng</span>
+                <div class="grid grid-cols-2 gap-3 py-3 border-y border-slate-200/50">
+                    <div>
+                        <label class="text-[9px] font-black text-slate-400 uppercase ml-1">Giảm tiền (đ)</label>
+                        <input type="number" id="pos-manual-discount" 
+                               oninput="app.recalculatePosFinal('cash')"
+                               class="w-full bg-white border border-slate-200 rounded-xl px-3 py-2.5 font-black text-rose-600 outline-none text-xs focus:ring-2 focus:ring-rose-100" 
+                               placeholder="0">
                     </div>
-                    <div class="flex items-center gap-1 font-black">
-                        <span id="pos-rank-discount-percent">0</span>%
+                    <div>
+                        <label class="text-[9px] font-black text-slate-400 uppercase ml-1">Giảm giá (%)</label>
+                        <input type="number" id="pos-manual-percent" 
+                               oninput="app.recalculatePosFinal('percent')"
+                               class="w-full bg-white border border-slate-200 rounded-xl px-3 py-2.5 font-black text-blue-600 outline-none text-xs focus:ring-2 focus:ring-blue-100" 
+                               placeholder="0">
                     </div>
                 </div>
 
-                <div class="flex justify-between items-center">
-                    <span class="text-[10px] font-black text-slate-400 uppercase">Giảm tiền mặt (đ):</span>
-                    <input type="number" id="pos-manual-discount" oninput="app.recalculatePosFinal()"
-                           class="w-28 bg-white border border-slate-200 rounded-xl px-3 py-1.5 text-right font-black text-rose-600 outline-none text-xs focus:ring-2 focus:ring-rose-100" value="0">
-                </div>
-
-                <div class="flex justify-between items-center pt-3 border-t border-slate-200">
+                <div class="flex justify-between items-center pt-1">
                     <span class="text-[11px] font-black text-slate-800 uppercase">Cần thanh toán:</span>
                     <span id="pos-display-total" class="text-2xl font-[900] text-blue-600">0đ</span>
                 </div>
             </div>
 
-            <div id="pos-cash-area" class="space-y-3 mb-6">
+            <div id="pos-cash-area" class="space-y-3 mb-6 bg-white p-4 rounded-2xl border border-slate-100 shadow-sm">
                 <div class="flex justify-between items-center">
                     <span class="text-[10px] font-black text-slate-400 uppercase">Tiền khách đưa:</span>
-                    <input type="number" id="pos-cash-received" oninput="app.recalculatePosFinal()"
-                           class="w-32 bg-slate-100 border-none rounded-xl px-4 py-3 text-right font-black text-slate-800 outline-none text-sm focus:ring-2 focus:ring-blue-400" placeholder="0">
+                    <input type="number" id="pos-cash-received" 
+                           oninput="app.recalculatePosFinal('money')"
+                           class="w-32 bg-slate-50 border border-slate-100 rounded-xl px-4 py-3 text-right font-black text-slate-800 outline-none text-sm focus:ring-2 focus:ring-blue-400" 
+                           placeholder="0">
                 </div>
                 <div class="flex justify-between items-center px-2">
                     <span class="text-[10px] font-black text-slate-400 uppercase">Tiền thối lại:</span>
@@ -2259,31 +2282,41 @@ nav .overflow-x-auto::-webkit-scrollbar {
 };
 
         // --- A. ĐỒNG BỘ CẤU HÌNH HỆ THỐNG (GIÁ SÂN, GIẢM GIÁ, HẠNG) ---
-        onValue(ref(db, 'config'), (snapshot) => {
-            const config = snapshot.val() || {};
-            window.dataCache.config = config;
-            console.log("⚙️ Đã cập nhật Cấu hình");
+       onValue(ref(db, 'config'), (snapshot) => {
+    const config = snapshot.val() || {};
+    window.dataCache.config = config;
+    console.log("⚙️ Đã cập nhật Cấu hình hệ thống");
 
-            // Tự động điền dữ liệu vào các ô Input ở Tab Cấu hình
-            const fields = {
-                'conf-peak-start': config.peakStart || "17:00",
-                'conf-price-peak': config.pricePeak || 0,
-                'conf-weekend-up': config.weekendUp || 0,
-                'conf-m-copper': config.mCopper || 0,
-                'conf-m-silver': config.mSilver || 5,
-                'conf-m-gold': config.mGold || 10,
-                'conf-rank-silver': config.rankSilver || 5000000,
-                'conf-rank-gold': config.rankGold || 10000000
-            };
+    // 1. Tự động điền dữ liệu vào các ô Input cơ bản
+    const fields = {
+        'conf-weekend-up': config.weekendUp || 0,
+        'conf-m-copper': config.mCopper || 0,
+        'conf-m-silver': config.mSilver || 5,
+        'conf-m-gold': config.mGold || 10,
+        'conf-m-diamond': config.mDiamond || 15,
+        'conf-rank-silver': config.rankSilver || 5000000,
+        'conf-rank-gold': config.rankGold || 10000000,
+        'conf-rank-diamond': config.rankDiamond || 20000000
+    };
 
-            for (let id in fields) {
-                const el = document.getElementById(id);
-                if (el) el.value = fields[id];
-            }
+    for (let id in fields) {
+        const el = document.getElementById(id);
+        if (el) el.value = fields[id];
+    }
 
-            // Vẽ lại bảng giá thuê theo loại sân
-            if (window.app && window.app.renderPriceConfig) window.app.renderPriceConfig();
-        });
+    // 2. BỔ SUNG: Đồng bộ danh sách Khung giờ phụ phí
+    if (window.app && window.app.renderTimeSlots) {
+        // Cập nhật biến tạm thời dùng để hiển thị và sửa đổi
+        window.tempTimeSlots = config.timeSlots || [];
+        // Gọi hàm vẽ lại danh sách khung giờ lên giao diện
+        window.app.renderTimeSlots();
+    }
+
+    // 3. Vẽ lại bảng giá thuê gốc theo loại sân
+    if (window.app && window.app.renderPriceConfig) {
+        window.app.renderPriceConfig();
+    }
+});
 
         // --- B. ĐỒNG BỘ SÂN & TIMELINE & LỊCH ĐẶT ---
         onValue(ref(db, 'courts'), (s) => {
