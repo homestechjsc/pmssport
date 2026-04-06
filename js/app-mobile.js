@@ -15,22 +15,25 @@ const appMobile = {
     },
 
     setupSync: () => {
-        window.onValue(window.ref(window.db, "/"), (snapshot) => {
-            const data = snapshot.val() || {};
-            window.dataCache = data;
-            
-            appMobile.renderDashboard(data);
-            appMobile.renderCourts(data.courts || {});
-            appMobile.renderCalendar();
+    window.onValue(window.ref(window.db, "/"), (snapshot) => {
+        const data = snapshot.val() || {};
+        window.dataCache = data;
+        
+        appMobile.renderDashboard(data);
+        appMobile.renderCourts(data.courts || {});
+        appMobile.renderCalendar();
 
-            // THÊM ĐOẠN NÀY: Nếu đang mở popup Nhập kho thì cập nhật ngay lập tức
-            const reportModal = document.getElementById('modal-report-detail');
+        // Kiểm tra kỹ hơn để tránh loop (vòng lặp) gây treo
+        const reportModal = document.getElementById('modal-report-detail');
+        if (reportModal && !reportModal.classList.contains('hidden')) {
             const reportTitle = document.getElementById('report-popup-title')?.innerText;
-            if (reportModal && !reportModal.classList.contains('hidden') && reportTitle === "Lịch sử nhập kho") {
-                appMobile.viewReportDetail('inventory');
+            if (reportTitle === "Lịch sử nhập kho") {
+                // Chỉ render lại data, không gọi lại toàn bộ hàm viewReportDetail
+                appMobile.renderInventoryListOnly(data.stocks || {}); 
             }
-        });
-    },
+        }
+    });
+},
 
     // 1. Render Dashboard Trang chủ
     renderDashboard: (data) => {
@@ -1089,22 +1092,34 @@ openCheckout: async (id) => {
         const endTime = timeCalc.realOut;
 
         // 4. TÍNH TIỀN GIỜ THEO KHUNG GIỜ LINH HOẠT
-        const priceList = conf.priceList || {};
-        const timeSlots = conf.timeSlots || [];
-        let hourlyRate = parseInt(priceList[court.Loai_San] || conf.priceNormal || 100000);
-        
-        const checkTime = court.Gio_Vao_Lich || court.Gio_Vao;
-        const matchedSlot = timeSlots.find(slot => checkTime >= slot.start && checkTime < slot.end);
-        if (matchedSlot) hourlyRate += parseInt(matchedSlot.price || 0);
+const priceList = conf.priceList || {};
+const timeSlots = conf.timeSlots || [];
+let hourlyRate = parseInt(priceList[court.Loai_San] || conf.priceNormal || 100000);
 
-        const now = new Date();
-        if ((now.getDay() === 0 || now.getDay() === 6) && conf.weekendUp) {
-            hourlyRate = hourlyRate * (1 + parseInt(conf.weekendUp) / 100);
-        }
+// Tìm phụ phí khung giờ
+const checkTime = court.Gio_Vao_Lich || court.Gio_Vao;
+const matchedSlot = timeSlots.find(slot => checkTime >= slot.start && checkTime < slot.end);
+let extraNote = ""; // Bổ sung để hiển thị ghi chú cho nhân viên
 
-        const roundedMinutes = Math.ceil(totalMinutes / 30) * 30;
-        const timeMoney = (roundedMinutes / 60) * hourlyRate;
+if (matchedSlot) {
+    hourlyRate += parseInt(matchedSlot.price || 0);
+    extraNote += `+${matchedSlot.price.toLocaleString()}đ khung giờ `;
+}
 
+// Phụ phí cuối tuần
+const now = new Date();
+if ((now.getDay() === 0 || now.getDay() === 6) && conf.weekendUp) {
+    hourlyRate = hourlyRate * (1 + parseInt(conf.weekendUp) / 100);
+    extraNote += `+${conf.weekendUp}% cuối tuần`;
+}
+
+// Tính tiền giờ và LÀM TRÒN TIỀN GIỜ ngay tại đây để tránh số lẻ
+const roundedMinutes = Math.ceil(totalMinutes / 30) * 30;
+const timeMoneyRaw = (roundedMinutes / 60) * hourlyRate;
+const timeMoney = Math.round(timeMoneyRaw / 1000) * 1000; // Làm tròn về hàng nghìn
+
+// Lưu lại note này để tí nữa hiển thị vào billBody.innerHTML
+window.tempExtraNoteMobile = extraNote;
         // 5. TÍNH TIỀN DỊCH VỤ
         let sMoney = 0; 
         let sLines = '';
@@ -1139,20 +1154,23 @@ openCheckout: async (id) => {
         }
 
         // 7. TỔNG HỢP TIỀN
-        const deposit = Number(court.Da_Coc || 0);
-        const subTotal = timeMoney + sMoney; 
-        const discountMoney = Math.round((subTotal * discountPercent) / 100);
-        const finalTotal = Math.max(0, subTotal - discountMoney - deposit);
+const deposit = Number(court.Da_Coc || 0);
+const subTotal = timeMoney + sMoney; 
+const discountMoney = Math.round((subTotal * discountPercent) / 100);
 
-        // 8. LƯU DỮ LIỆU VÀO CÁC Ô ẨN (Quan trọng để confirmPayment sử dụng đúng billCode)
-        const totalInput = document.getElementById('temp-bill-total-mobile');
-        if (totalInput) totalInput.value = finalTotal;
+// --- LOGIC LÀM TRÒN SỐ TIỀN TRÊN MOBILE ---
+const finalTotalRaw = Math.max(0, subTotal - discountMoney - deposit);
+// Làm tròn về hàng nghìn gần nhất (Ví dụ: 263,333 -> 263,000)
+const finalTotal = Math.round(finalTotalRaw / 1000) * 1000; 
 
-        const codeInput = document.getElementById('display-bill-code-mobile');
-        if (codeInput) codeInput.value = billCode; // <--- Gán mã đơn vào đây
+// 8. LƯU DỮ LIỆU VÀO CÁC Ô ẨN (Dùng finalTotal đã làm tròn)
+const totalInput = document.getElementById('temp-bill-total-mobile');
+if (totalInput) totalInput.value = finalTotal;
 
-        window.selectedCourtIdMobile = id;
+const codeInput = document.getElementById('display-bill-code-mobile');
+if (codeInput) codeInput.value = billCode; 
 
+window.selectedCourtIdMobile = id;
         // 9. HIỂN THỊ GIAO DIỆN HÓA ĐƠN MOBILE
         const billBody = document.getElementById('checkout-body-mobile');
         if (billBody) {
@@ -1212,16 +1230,27 @@ openCheckout: async (id) => {
         }
 
         // 10. MỞ MODAL MOBILE
-        document.getElementById('modal-court-detail-mobile').classList.add('hidden');
-        const modal = document.getElementById('modal-checkout-mobile');
-        if (modal) modal.classList.remove('hidden');
-        
-        document.getElementById('payment-method-mobile').value = "Tiền mặt";
-        document.getElementById('checkout-wallet-view-mobile')?.classList.add('hidden');
+document.getElementById('modal-court-detail-mobile').classList.add('hidden');
+const modal = document.getElementById('modal-checkout-mobile');
+const sheet = document.getElementById('checkout-sheet-mobile');
 
-        setTimeout(() => {
-            document.getElementById('checkout-sheet-mobile')?.classList.remove('translate-y-full');
-        }, 10);
+if (modal && sheet) {
+    modal.classList.remove('hidden');
+    
+    // QUAN TRỌNG: Xóa bỏ style inline để Tailwind class và animation có tác dụng lại từ đầu
+    sheet.style.transform = ""; 
+    
+    // Đảm bảo Modal bắt đầu từ trạng thái ẩn phía dưới (Full reset)
+    sheet.classList.add('translate-y-full'); 
+
+    document.getElementById('payment-method-mobile').value = "Tiền mặt";
+    document.getElementById('checkout-wallet-view-mobile')?.classList.add('hidden');
+
+    // Chờ một chút để trình duyệt nhận diện trạng thái reset rồi mới trượt lên
+    setTimeout(() => {
+        sheet.classList.remove('translate-y-full');
+    }, 50); 
+}
 
     } catch (err) { 
         console.error("Lỗi openCheckoutMobile:", err);
@@ -1232,8 +1261,16 @@ openCheckout: async (id) => {
 closeCheckout: () => {
     const modal = document.getElementById('modal-checkout-mobile');
     const sheet = document.getElementById('checkout-sheet-mobile');
-    if (sheet) sheet.style.transform = "translateY(100%)";
-    setTimeout(() => modal?.classList.add('hidden'), 300);
+    
+    if (sheet) {
+        // Sử dụng Class thay vì can thiệp style trực tiếp
+        sheet.classList.add('translate-y-full');
+    }
+    
+    // Đợi hiệu ứng trượt kết thúc (300ms) rồi mới ẩn hẳn container cha
+    setTimeout(() => {
+        if (modal) modal.classList.add('hidden');
+    }, 300);
 },
 
 closeCourtDetail: () => {
@@ -1272,14 +1309,22 @@ confirmPayment: async () => {
     const id = window.selectedCourtIdMobile;
     const total = Number(document.getElementById('temp-bill-total-mobile').value);
     const method = document.getElementById('payment-method-mobile').value;
+    const btn = document.getElementById('btn-confirm-checkout-mobile'); // Lấy nút bấm để xử lý chống treo
     
-    // 1. LẤY MÃ ĐƠN HÀNG ĐÃ TẠO TỪ OPENCHECKOUT (Đảm bảo đồng bộ SB-xxxxxx)
+    // 1. LẤY MÃ ĐƠN HÀNG ĐÃ TẠO TỪ OPENCHECKOUT (Giữ nguyên logic SB-xxxxxx)
     const billCode = document.getElementById('display-bill-code-mobile')?.value || ("SB-" + Date.now().toString().slice(-6));
     
     if (!id) return alert("Lỗi: Không xác định được sân!");
     
     if (confirm(`Xác nhận thu ${total.toLocaleString()}đ (${method})?`)) {
         try {
+            // --- TỐI ƯU CHỐNG TREO: Khóa nút bấm ngay khi bắt đầu xử lý ---
+            if (btn) {
+                btn.disabled = true;
+                btn.innerText = "ĐANG XỬ LÝ...";
+                btn.classList.add('opacity-50', 'cursor-not-allowed');
+            }
+
             const court = window.dataCache.courts[id];
             const updates = {};
             const now = new Date();
@@ -1288,17 +1333,16 @@ confirmPayment: async () => {
             const timestamp = Date.now();
             const bKey = 'BILL-' + timestamp;
 
-            // 2. TẠO NỘI DUNG GIAO DỊCH CHI TIẾT (Để hiện đầy đủ trên bảng Hóa Đơn)
+            // 2. TẠO NỘI DUNG GIAO DỊCH CHI TIẾT (Giữ nguyên tính năng hiện trên bảng Hóa Đơn)
             const gioRa = now.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
             const noiDungGiaoDich = `Tiền giờ ${court.Ten_San || id} (${court.Gio_Vao} - ${gioRa})`;
 
-            // 3. CẬP NHẬT TỔNG CHI TIÊU & THĂNG HẠNG (Nếu là hội viên)
+            // 3. CẬP NHẬT TỔNG CHI TIÊU & THĂNG HẠNG (Giữ nguyên tính năng Hội viên)
             if (court.Member_ID && window.dataCache.members[court.Member_ID]) {
                 const member = window.dataCache.members[court.Member_ID];
                 const newTotalSpend = (Number(member.Tong_Chi_Tieu) || 0) + total;
                 updates[`members/${court.Member_ID}/Tong_Chi_Tieu`] = newTotalSpend;
 
-                // Logic thăng hạng đồng bộ với hệ thống (Kim cương, Vàng, Bạc)
                 const conf = window.dataCache.config || {};
                 let newRank = member.Hang_HV || "Đồng";
                 if (newTotalSpend >= (conf.rankDiamond || 20000000)) newRank = "Kim cương";
@@ -1307,7 +1351,7 @@ confirmPayment: async () => {
                 updates[`members/${court.Member_ID}/Hang_HV`] = newRank;
             }
 
-            // 4. LƯU HÓA ĐƠN
+            // 4. LƯU HÓA ĐƠN (Giữ nguyên tính năng lưu Items đối soát)
             updates[`bills/${bKey}`] = {
                 Id: bKey,
                 Ma_Don: billCode,
@@ -1319,11 +1363,10 @@ confirmPayment: async () => {
                 Thoi_Gian: timeStr,
                 Ngay_Thang: dateStr,
                 Loai_HD: "Tiền sân",
-                // Lưu thêm chi tiết dịch vụ nếu cần đối soát sâu
                 Items: court.Playing?.Services ? Object.values(court.Playing.Services) : []
             };
 
-            // 5. GHI SỔ QUỸ (LEDGER)
+            // 5. GHI SỔ QUỸ (LEDGER) (Giữ nguyên tính năng đồng bộ doanh thu)
             const lKey = 'LG-' + timestamp;
             updates[`ledger/${lKey}`] = {
                 Id: lKey,
@@ -1338,31 +1381,45 @@ confirmPayment: async () => {
                 Ma_Don: billCode
             };
 
-            // 6. TRỪ TIỀN VÍ (NẾU SỬ DỤNG VÍ HỘI VIÊN)
+            // 6. TRỪ TIỀN VÍ (Giữ nguyên tính năng thanh toán bằng ví)
             if (method === "Ví hội viên" && court.Member_ID) {
                 const member = window.dataCache.members[court.Member_ID];
                 const currentBalance = Number(member?.Vi_Du || 0);
-                if (currentBalance < total) return alert("❌ Số dư ví hội viên không đủ!");
+                if (currentBalance < total) {
+                    // Mở lại nút nếu lỗi số dư
+                    if (btn) { btn.disabled = false; btn.innerText = "Xác nhận & Trả sân"; btn.classList.remove('opacity-50'); }
+                    return alert("❌ Số dư ví hội viên không đủ!");
+                }
                 updates[`members/${court.Member_ID}/Vi_Du`] = currentBalance - total;
             }
 
-            // 7. RESET TRẠNG THÁI SÂN
+            // 7. RESET TRẠNG THÁI SÂN (Giữ nguyên tính năng dọn dẹp dữ liệu)
             updates[`courts/${id}/Trang_Thai`] = "Sẵn sàng";
             updates[`courts/${id}/Gio_Vao`] = "";
             updates[`courts/${id}/Ten_Khach`] = "";
+            updates[`courts/${id}/SDT`] = ""; // Reset thêm SDT để đồng bộ
             updates[`courts/${id}/Member_ID`] = null;
             updates[`courts/${id}/Da_Coc`] = 0;
             updates[`courts/${id}/Gio_Vao_Lich`] = "";
-            updates[`courts/${id}/Playing`] = null; // Xóa dữ liệu chơi tạm thời
+            updates[`courts/${id}/Playing`] = null;
+            updates[`courts/${id}/Dich_Vu`] = null; // Reset cả nhánh Dich_Vu cũ nếu có
 
+            // --- THỰC THI DUY NHẤT 1 LẦN: Giúp hệ thống không bị nghẽn ---
             await window.update(window.ref(window.db), updates);
             
-            alert(`✅ Thanh toán thành công!\nMã đơn: ${billCode}`);
+            // 8. ĐÓNG MODAL TRƯỚC: Tạo cảm giác mượt mà tức thì cho người dùng
             appMobile.closeCheckout();
+            alert(`✅ Thanh toán thành công!\nMã đơn: ${billCode}`);
             
         } catch (e) {
             console.error("Lỗi confirmPayment:", e);
             alert("Lỗi hệ thống: " + e.message);
+            // Mở lại nút nếu có lỗi xảy ra
+            if (btn) {
+                btn.disabled = false;
+                btn.innerText = "Xác nhận & Trả sân";
+                btn.classList.remove('opacity-50', 'cursor-not-allowed');
+            }
         }
     }
 },
