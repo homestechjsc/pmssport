@@ -2301,14 +2301,16 @@ nav .overflow-x-auto::-webkit-scrollbar {
 
     for (let id in fields) {
         const el = document.getElementById(id);
-        if (el) el.value = fields[id];
+        if (el) {
+            el.value = fields[id];
+        }
     }
 
-    // 2. BỔ SUNG: Đồng bộ danh sách Khung giờ phụ phí
+    // 2. Đồng bộ danh sách Khung giờ phụ phí
+    // Sử dụng mảng rỗng làm mặc định để tránh lỗi .map() hoặc .forEach() bên trong hàm render
+    window.tempTimeSlots = Array.isArray(config.timeSlots) ? config.timeSlots : []; 
+    
     if (window.app && window.app.renderTimeSlots) {
-        // Cập nhật biến tạm thời dùng để hiển thị và sửa đổi
-        window.tempTimeSlots = config.timeSlots || [];
-        // Gọi hàm vẽ lại danh sách khung giờ lên giao diện
         window.app.renderTimeSlots();
     }
 
