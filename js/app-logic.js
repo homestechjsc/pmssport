@@ -682,55 +682,69 @@ window.app = {
 },
 // Hàm tính toán thời gian sử dụng sân Pickleball thông minh
 calculatePickleballFinalTime: (court) => {
-    // 1. Lấy thời gian vào thực tế (lúc bấm check-in)
+    // 1. Lấy dữ liệu cấu hình từ bộ nhớ tạm
+    const conf = window.dataCache.config || {};
+    const priceList = conf.priceList || {};
+    const timeSlots = conf.timeSlots || []; // Danh sách phụ phí khung giờ
+
+    // 2. Lấy thời gian vào/ra thực tế và lịch đặt
     const realIn = court.Gio_Vao; 
-    
-    // 2. Lấy thời gian ra thực tế (giờ hiện tại hệ thống)
     const now = new Date();
     const realOut = now.getHours().toString().padStart(2, '0') + ":" + 
                     now.getMinutes().toString().padStart(2, '0');
     
-    // 3. Lấy mốc lịch đặt ban đầu (đã được lưu khi bấm check-in từ booking)
     const bookIn = court.Gio_Vao_Lich; 
     const bookOut = court.Gio_Ra_Lich;
 
     let totalMins = 0;
     let detail = "";
 
-    // TRƯỜNG HỢP: KHÁCH CÓ LỊCH ĐẶT TRƯỚC
+    // 3. TÍNH TỔNG PHÚT (Giữ nguyên logic của bạn)
     if (bookIn && bookOut) {
-        // A. Tính phút vào sớm: Nếu giờ vào thực tế < giờ bắt đầu trong lịch
-        let earlyMins = 0;
-        if (realIn < bookIn) {
-            earlyMins = app.diffMinutes(realIn, bookIn);
-        }
-
-        // B. Phút trong lịch đặt: Luôn tính đủ thời gian đã cam kết đặt
-        // Đây chính là mốc tối thiểu khách phải trả dù ra sớm hơn bookOut
+        let earlyMins = (realIn < bookIn) ? app.diffMinutes(realIn, bookIn) : 0;
         const bookingMins = app.diffMinutes(bookIn, bookOut);
+        let lateMins = (realOut > bookOut) ? app.diffMinutes(bookOut, realOut) : 0;
 
-        // C. Phút chơi lố: Chỉ tính nếu giờ ra thực tế > giờ kết thúc trong lịch
-        let lateMins = 0;
-        if (realOut > bookOut) {
-            lateMins = app.diffMinutes(bookOut, realOut);
-        }
-
-        // Tổng cộng phút tính tiền
         totalMins = earlyMins + bookingMins + lateMins;
-        
-        // Chuỗi diễn giải để hiện lên hóa đơn cho minh bạch
         detail = `${earlyMins > 0 ? 'Sớm ' + earlyMins + 'p + ' : ''}${bookingMins}p lịch đặt${lateMins > 0 ? ' + Lố ' + lateMins + 'p' : ''}`;
-    } 
-    // TRƯỜNG HỢP: KHÁCH VÃNG LAI (KHÔNG CÓ LỊCH ĐẶT)
-    else {
+    } else {
         totalMins = app.diffMinutes(realIn, realOut);
         detail = "Khách vãng lai (Tính thực tế)";
     }
 
+    // 4. LOGIC TÍNH PHỤ PHÍ (BỔ SUNG QUAN TRỌNG)
+    // Mặc định lấy giá cơ bản theo loại sân
+    let hourlyRate = parseInt(priceList[court.Loai_San] || conf.priceNormal || 100000);
+    let extraFeeDetail = "";
+
+    // A. Kiểm tra phụ phí khung giờ (timeSlots)
+    // Ưu tiên mốc thời gian khách bắt đầu vào để áp giá khung giờ đó
+    const checkTime = bookIn || realIn; 
+    const matchedSlot = timeSlots.find(slot => checkTime >= slot.start && checkTime < slot.end);
+    if (matchedSlot) {
+        const extraPrice = parseInt(matchedSlot.price || 0);
+        hourlyRate += extraPrice;
+        extraFeeDetail += ` (Gồm +${extraPrice.toLocaleString()}đ khung giờ ${matchedSlot.start}-${matchedSlot.end})`;
+    }
+
+    // B. Kiểm tra phụ phí cuối tuần (weekendUp)
+    const isWeekend = now.getDay() === 0 || now.getDay() === 6;
+    if (isWeekend && conf.weekendUp) {
+        const upPercent = parseInt(conf.weekendUp);
+        hourlyRate = hourlyRate * (1 + upPercent / 100);
+        extraFeeDetail += ` (+${upPercent}% cuối tuần)`;
+    }
+
+    // 5. Làm tròn block 30 phút để tính tiền (Tùy chọn theo nghiệp vụ của bạn)
+    const roundedMinutes = Math.ceil(totalMins / 30) * 30;
+    const finalMoney = (roundedMinutes / 60) * hourlyRate;
+
     return { 
         totalMins: totalMins, 
-        detail: detail, 
-        realOut: realOut 
+        detail: detail + extraFeeDetail, // Hiển thị chi tiết phụ phí trên hóa đơn
+        realOut: realOut,
+        hourlyRate: hourlyRate, // Trả thêm đơn giá đã gồm phụ phí để Modal Checkout sử dụng
+        finalMoney: finalMoney
     };
 },
 
