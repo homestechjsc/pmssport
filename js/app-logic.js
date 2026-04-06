@@ -331,18 +331,23 @@ window.app = {
     Object.entries(courts).forEach(([cId, court]) => {
         const isMaint = court.Trang_Thai === "Bảo trì";
 
-        // --- PHẦN CHỈNH SỬA: Lọc đơn online chưa duyệt ---
+        // --- PHẦN CHỈNH SỬA: Lọc đơn online chưa duyệt và đơn đã nhận sân ---
         const bks = Object.entries(bookings).filter(([id, b]) => {
             const isTarget = b.Court_ID === cId && b.Ngay === vD;
             if (!isTarget) return false;
 
+            // BỔ SUNG: Nếu lịch đã được nhận sân (từ Mobile/Desk), ẩn khỏi Timeline ngay lập tức
+            if (b.Trang_Thai === "Đã nhận sân") {
+                return false;
+            }
+
             // Nếu ID bắt đầu bằng BK-ON- (đơn từ Web)
             if (id.startsWith('BK-ON-')) {
-                // Chỉ trả về true nếu đã được quản lý bấm xác nhận (đổi trạng thái)
+                // Chỉ trả về true nếu đã được quản lý bấm xác nhận
                 return b.Trang_Thai === "Đã xác nhận";
             }
 
-            // Các đơn đặt trực tiếp tại phần mềm (Offline) hiển thị bình thường
+            // Các đơn đặt trực tiếp tại phần mềm hiển thị bình thường nếu chưa nhận sân
             return true;
         });
         // --- KẾT THÚC PHẦN CHỈNH SỬA ---
