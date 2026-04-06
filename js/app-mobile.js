@@ -590,22 +590,41 @@ break;
 
     // --- Các hàm hỗ trợ khác ---
     renderCourts: (courts) => {
-        const container = document.getElementById('grid-courts-mobile');
-        if (!container) return;
-        let html = '';
-        Object.entries(courts).forEach(([id, c]) => {
-            if (c.Trang_Thai !== "Đang chơi") return;
-            html += `
-                <div class="p-5 rounded-[2rem] border border-rose-100 bg-rose-50 shadow-sm flex justify-between items-center">
-                    <div class="flex items-center gap-4">
-                        <div class="w-12 h-12 rounded-2xl bg-rose-500 text-white flex items-center justify-center shadow-lg"><i class="fa-solid fa-table-tennis-paddle-ball"></i></div>
-                        <div><p class="font-black text-slate-800 uppercase text-sm">${c.Ten_San || id}</p><p class="text-[10px] font-black text-rose-500 uppercase italic"><span class="pulse-red">●</span> ${c.Ten_Khach || 'Khách lẻ'}</p></div>
+    const container = document.getElementById('grid-courts-mobile');
+    if (!container) return;
+    let html = '';
+    
+    Object.entries(courts).forEach(([id, c]) => {
+        const isBusy = c.Trang_Thai === "Đang chơi";
+        
+        // Cấu hình màu sắc theo trạng thái
+        const cardBg = isBusy ? 'bg-rose-50 border-rose-100' : 'bg-white border-slate-100';
+        const iconBg = isBusy ? 'bg-rose-500' : 'bg-blue-500';
+        const statusText = isBusy ? 'text-rose-500' : 'text-blue-500';
+
+        html += `
+            <div onclick="appMobile.openCourtDetail('${id}')" 
+                 class="p-5 rounded-[2rem] border ${cardBg} shadow-sm flex justify-between items-center active:scale-95 transition-all">
+                <div class="flex items-center gap-4">
+                    <div class="w-12 h-12 rounded-2xl ${iconBg} text-white flex items-center justify-center shadow-lg">
+                        <i class="fa-solid fa-table-tennis-paddle-ball"></i>
                     </div>
-                    <div class="text-right"><p class="text-[9px] font-black text-slate-400 uppercase mb-1">Vào lúc</p><p class="font-black text-slate-700 text-base">${c.Gio_Vao || '--:--'}</p></div>
-                </div>`;
-        });
-        container.innerHTML = html || '<div class="py-10 text-center opacity-20 font-black uppercase text-[10px]">Tất cả sân đang trống</div>';
-    },
+                    <div>
+                        <p class="font-black text-slate-800 uppercase text-sm">${c.Ten_San || id}</p>
+                        <p class="text-[10px] font-black ${statusText} uppercase italic">
+                            ${isBusy ? `<span class="pulse-red">●</span> ${c.Ten_Khach || 'Khách lẻ'}` : 'Sẵn sàng'}
+                        </p>
+                    </div>
+                </div>
+                <div class="text-right">
+                    <p class="text-[9px] font-black text-slate-400 uppercase mb-1">${isBusy ? 'Vào lúc' : 'Trạng thái'}</p>
+                    <p class="font-black text-slate-700 text-base">${isBusy ? (c.Gio_Vao || '--:--') : 'TRỐNG'}</p>
+                </div>
+            </div>`;
+    });
+    
+    container.innerHTML = html || '<div class="py-10 text-center opacity-20 font-black uppercase text-[10px]">Không có dữ liệu sân</div>';
+},
 
     renderCalendar: () => {
     const container = document.getElementById('list-calendar-mobile');
@@ -615,12 +634,21 @@ break;
     const bookings = window.dataCache.bookings || {};
     const courts = window.dataCache.courts || {};
 
+    // THÊM ĐIỀU KIỆN: Trang_Thai !== "Đã nhận sân" để ẩn hẳn khi đã check-in
     const list = Object.entries(bookings)
-        .filter(([id, b]) => b.Ngay === viewDate && b.Trang_Thai !== "Chờ xác nhận")
+        .filter(([id, b]) => 
+            b.Ngay === viewDate && 
+            b.Trang_Thai !== "Chờ xác nhận" && 
+            b.Trang_Thai !== "Đã nhận sân"
+        )
         .sort((a, b) => a[1].Bat_Dau.localeCompare(b[1].Bat_Dau));
 
     if (list.length === 0) {
-        container.innerHTML = `<div class="py-20 text-center opacity-20"><i class="fa-solid fa-calendar-xmark text-4xl mb-2"></i><p class="font-black uppercase text-[10px]">Không có lịch đặt</p></div>`;
+        container.innerHTML = `
+            <div class="py-20 text-center opacity-20">
+                <i class="fa-solid fa-calendar-xmark text-4xl mb-2"></i>
+                <p class="font-black uppercase text-[10px]">Không có lịch đặt chờ nhận</p>
+            </div>`;
         return;
     }
 
@@ -641,14 +669,50 @@ break;
             </div>
             
             <div class="flex gap-2 border-l pl-4">
+                <button onclick="appMobile.checkInFromBooking('${id}')" 
+                        class="w-8 h-8 flex items-center justify-center bg-emerald-50 text-emerald-600 rounded-full active:scale-90 transition-all">
+                    <i class="fa-solid fa-check text-[10px]"></i>
+                </button>
+
                 <button onclick="appMobile.editBooking('${id}')" class="w-8 h-8 flex items-center justify-center bg-blue-50 text-blue-600 rounded-full active:scale-90 transition-all">
                     <i class="fa-solid fa-pen text-[10px]"></i>
                 </button>
-                <button onclick="appMobile.deleteBooking('${id}')" class="w-8 h-8 flex items-center justify-center bg-rose-50 text-rose-500 rounded-full active:scale-90 transition-all">
-                    <i class="fa-solid fa-trash-can text-[10px]"></i>
-                </button>
             </div>
         </div>`).join('');
+},
+checkInFromBooking: async (bookingId) => {
+    const b = window.dataCache.bookings[bookingId];
+    if (!b) return;
+
+    if (confirm(`Nhận sân cho khách [${b.Ten_Khach}] ngay bây giờ?`)) {
+        try {
+            const updates = {};
+            const gioHienTai = new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
+            
+            // 1. Cập nhật dữ liệu cho Sân (Chuyển sang Đang chơi)
+            updates[`courts/${b.Court_ID}/Trang_Thai`] = "Đang chơi";
+            updates[`courts/${b.Court_ID}/Ten_Khach`] = b.Ten_Khach;
+            updates[`courts/${b.Court_ID}/SDT`] = b.SDT || "";
+            updates[`courts/${b.Court_ID}/Gio_Vao`] = gioHienTai;
+            updates[`courts/${b.Court_ID}/Gio_Vao_Lich`] = b.Bat_Dau; // Dùng để tính giá khung giờ chính xác
+            updates[`courts/${b.Court_ID}/Member_ID`] = b.Member_ID || null;
+            updates[`courts/${b.Court_ID}/Da_Coc`] = Number(b.Tien_Coc || 0);
+
+            // 2. Cập nhật trạng thái lịch đặt
+            updates[`bookings/${bookingId}/Trang_Thai`] = "Đã nhận sân";
+
+            await window.update(window.ref(window.db), updates);
+            
+            alert("✅ Nhận sân thành công!");
+            
+            // Tự động chuyển về trang chủ để theo dõi sân
+            if (window.switchTab) window.switchTab('home');
+            
+        } catch (e) {
+            console.error("Lỗi Check-in:", e);
+            alert("❌ Lỗi: " + e.message);
+        }
+    }
 },
 // HÀM XOÁ LỊCH
     deleteBooking: async (id) => {
@@ -844,6 +908,557 @@ break;
         console.error("Lỗi saveBooking:", e);
         alert("Lỗi: " + e.message); 
     }
+},
+// Thêm vào trong đối tượng appMobile
+openCourtDetail: (id) => {
+    const court = window.dataCache.courts[id];
+    window.selectedCourtIdMobile = id;
+    const body = document.getElementById('court-detail-body-mobile');
+    const isBusy = court.Trang_Thai === "Đang chơi";
+
+    // --- LOGIC LẤY DANH SÁCH DỊCH VỤ VỚI NÚT ĐIỀU KHIỂN ---
+    let serviceHtml = '';
+    let rawServices = (court.Playing && court.Playing.Services) ? court.Playing.Services : (court.Dich_Vu || {});
+    
+    if (isBusy) {
+        const sEntries = Object.entries(rawServices);
+        if (sEntries.length > 0) {
+            serviceHtml = `<div class="mt-4 pt-4 border-t border-slate-100 space-y-2">`;
+            sEntries.forEach(([sid, item]) => {
+                const qty = Number(item.Qty || item.SL || item.So_Luong || 0);
+                if (qty > 0) {
+                    serviceHtml += `
+                        <div class="flex justify-between items-center bg-white p-2 rounded-xl border border-slate-50">
+                            <div class="flex-1 min-w-0">
+                                <p class="text-[10px] font-black text-slate-700 uppercase truncate">${item.Name || item.Ten_Mon || 'Dịch vụ'}</p>
+                                <p class="text-[9px] text-blue-500 font-bold">${Number(item.Price || item.Gia || 0).toLocaleString()}đ</p>
+                            </div>
+                            <div class="flex items-center gap-3 bg-slate-50 px-2 py-1 rounded-lg border border-slate-100">
+                                <button onclick="appMobile.updateServiceQty('${id}', '${sid}', -1)" 
+                                        class="w-7 h-7 flex items-center justify-center text-slate-400 active:scale-75 transition-all">
+                                    <i class="fa-solid fa-minus text-[10px]"></i>
+                                </button>
+                                
+                                <span class="text-[11px] font-black text-slate-800 w-4 text-center">${qty}</span>
+                                
+                                <button onclick="appMobile.updateServiceQty('${id}', '${sid}', 1)" 
+                                        class="w-7 h-7 flex items-center justify-center text-blue-600 active:scale-75 transition-all">
+                                    <i class="fa-solid fa-plus text-[10px]"></i>
+                                </button>
+                            </div>
+                        </div>`;
+                }
+            });
+            serviceHtml += `</div>`;
+        } else {
+            serviceHtml = `<p class="text-[9px] text-slate-300 italic mt-2 text-center">Chưa dùng dịch vụ</p>`;
+        }
+    }
+
+    // --- RENDER GIAO DIỆN ---
+    body.innerHTML = `
+        <div class="text-center mb-6">
+            <h3 class="text-2xl font-[900] text-slate-800 uppercase italic tracking-tighter">${court.Ten_San || id}</h3>
+            <span class="px-3 py-1 rounded-full text-[10px] font-black ${isBusy ? 'bg-rose-100 text-rose-600' : 'bg-blue-100 text-blue-600'} uppercase">
+                ${court.Trang_Thai}
+            </span>
+        </div>
+
+        ${isBusy ? `
+            <div class="bg-slate-50 p-5 rounded-[2rem] mb-4 border border-slate-100">
+                <div class="flex justify-between items-start">
+                    <div>
+                        <p class="text-[9px] font-black text-slate-400 uppercase italic mb-1">Khách đang chơi:</p>
+                        <p class="text-sm font-black text-slate-900 uppercase">${court.Ten_Khach || 'Khách lẻ'}</p>
+                    </div>
+                    <div class="text-right">
+                        <p class="text-[9px] font-black text-slate-400 uppercase mb-1">Giờ vào</p>
+                        <p class="text-sm font-black text-blue-600">${court.Gio_Vao || '--:--'}</p>
+                    </div>
+                </div>
+                ${serviceHtml}
+            </div>
+            
+            <div class="space-y-3">
+                <div class="grid grid-cols-2 gap-3">
+                    <button onclick="appMobile.openAddService()" 
+                            class="bg-amber-500 text-white py-4 rounded-2xl font-[900] uppercase text-[10px] shadow-lg shadow-amber-100 active:scale-95 transition-all flex flex-col items-center justify-center gap-1">
+                        <i class="fa-solid fa-cart-plus text-sm"></i>
+                        <span>Thêm dịch vụ</span>
+                    </button>
+
+                    <button onclick="appMobile.openCheckout('${id}')" 
+                            class="bg-blue-600 text-white py-4 rounded-2xl font-[900] uppercase text-[10px] shadow-lg shadow-blue-100 active:scale-95 transition-all flex flex-col items-center justify-center gap-1">
+                        <i class="fa-solid fa-file-invoice-dollar text-sm"></i>
+                        <span>Thanh toán</span>
+                    </button>
+                </div>
+            </div>
+        ` : `
+            <div class="py-6 text-center">
+                <p class="text-xs text-slate-400 font-medium px-10 mb-6 uppercase tracking-widest">Sân đang sẵn sàng đón khách mới</p>
+                <button onclick="appMobile.checkInFast('${id}')" 
+                        class="w-full bg-emerald-600 text-white py-5 rounded-2xl font-[900] uppercase shadow-lg shadow-emerald-100 active:scale-95 transition-all">
+                    <i class="fa-solid fa-play mr-2 text-xs"></i> Vào sân ngay
+                </button>
+            </div>
+        `}
+
+        <button onclick="appMobile.closeCourtDetail()" class="w-full py-4 mt-2 text-slate-300 font-black uppercase text-[10px] tracking-widest active:text-slate-500">
+            Quay lại
+        </button>`;
+
+    document.getElementById('modal-court-detail-mobile').classList.remove('hidden');
+    setTimeout(() => {
+        document.getElementById('court-detail-sheet').style.transform = "translateY(0)";
+    }, 10);
+},
+updateServiceQty: async (courtId, sid, change) => {
+    try {
+        const court = window.dataCache.courts[courtId];
+        if (!court) return;
+
+        let currentServices = court.Playing?.Services || court.Dich_Vu || {};
+        const item = currentServices[sid];
+        if (!item) return;
+
+        const currentQty = Number(item.Qty || item.So_Luong || 0);
+        const newQty = currentQty + change;
+
+        const updates = {};
+        // Đồng bộ cả 2 đường dẫn dữ liệu cũ và mới
+        const pathPlaying = `courts/${courtId}/Playing/Services/${sid}`;
+        const pathDichVu = `courts/${courtId}/Dich_Vu/${sid}`;
+
+        if (newQty <= 0) {
+            // Xác nhận trước khi xóa hoàn toàn dịch vụ khỏi sân
+            if (!confirm(`Xóa món [${item.Name || item.Ten_Mon}] khỏi sân?`)) return;
+            updates[pathPlaying] = null;
+            updates[pathDichVu] = null;
+        } else {
+            // Cập nhật số lượng mới
+            const updatedItem = {
+                ...item,
+                Qty: newQty,
+                So_Luong: newQty,
+                SL: newQty
+            };
+            updates[pathPlaying] = updatedItem;
+            updates[pathDichVu] = updatedItem;
+        }
+
+        await window.update(window.ref(window.db), updates);
+        
+        // Gọi lại chính hàm này để cập nhật giao diện hiển thị ngay lập tức
+        appMobile.openCourtDetail(courtId);
+        
+    } catch (e) {
+        console.error("Lỗi cập nhật dịch vụ Mobile:", e);
+        alert("Lỗi: " + e.message);
+    }
+},
+checkInFast: async (id) => {
+    const gioVao = new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
+    const updates = {};
+    updates[`courts/${id}/Trang_Thai`] = "Đang chơi";
+    updates[`courts/${id}/Gio_Vao`] = gioVao;
+    updates[`courts/${id}/Ten_Khach`] = "Khách lẻ";
+    
+    await window.update(window.ref(window.db), updates);
+    appMobile.closeCourtDetail();
+},
+openCheckout: async (id) => {
+    try {
+        // 1. LẤY DỮ LIỆU SÂN & CẤU HÌNH
+        const courtRef = window.ref(window.db, `courts/${id}`);
+        const snapshot = await window.get(courtRef);
+        if (!snapshot.exists()) return alert("Không tìm thấy dữ liệu sân!");
+        
+        const court = snapshot.val();
+        const conf = window.dataCache.config || {};
+        if (!court.Gio_Vao) return alert("Sân chưa có giờ vào!");
+
+        // 2. TẠO MÃ ĐƠN HÀNG ĐỒNG BỘ VỚI DESKTOP (Sử dụng tiền tố SB-)
+        const billCode = "SB-" + Date.now().toString().slice(-6);
+
+        // 3. TÍNH TOÁN THỜI GIAN (Sử dụng logic từ app-logic.js)
+        const timeCalc = (window.app && window.app.calculatePickleballFinalTime) 
+                     ? window.app.calculatePickleballFinalTime(court) 
+                     : { totalMins: 0, realOut: "--:--", detail: "Chưa tính được thời gian" };
+        const totalMinutes = timeCalc.totalMins;
+        const endTime = timeCalc.realOut;
+
+        // 4. TÍNH TIỀN GIỜ THEO KHUNG GIỜ LINH HOẠT
+        const priceList = conf.priceList || {};
+        const timeSlots = conf.timeSlots || [];
+        let hourlyRate = parseInt(priceList[court.Loai_San] || conf.priceNormal || 100000);
+        
+        const checkTime = court.Gio_Vao_Lich || court.Gio_Vao;
+        const matchedSlot = timeSlots.find(slot => checkTime >= slot.start && checkTime < slot.end);
+        if (matchedSlot) hourlyRate += parseInt(matchedSlot.price || 0);
+
+        const now = new Date();
+        if ((now.getDay() === 0 || now.getDay() === 6) && conf.weekendUp) {
+            hourlyRate = hourlyRate * (1 + parseInt(conf.weekendUp) / 100);
+        }
+
+        const roundedMinutes = Math.ceil(totalMinutes / 30) * 30;
+        const timeMoney = (roundedMinutes / 60) * hourlyRate;
+
+        // 5. TÍNH TIỀN DỊCH VỤ
+        let sMoney = 0; 
+        let sLines = '';
+        let services = court.Playing?.Services || court.Dich_Vu || {};
+        if (typeof services !== 'object' || services === null) services = {};
+
+        Object.values(services).forEach(item => {
+            if (item && typeof item === 'object') {
+                const p = parseInt(item.Price || item.Gia || 0);
+                const q = parseInt(item.Qty || item.SL || item.So_Luong || 0);
+                if (q > 0) {
+                    sMoney += (p * q);
+                    sLines += `
+                        <div class="flex justify-between text-xs text-slate-500 py-1 border-b border-slate-100 border-dotted">
+                            <span>${item.Name || item.Ten} <b class="text-slate-800">x${q}</b></span>
+                            <span class="font-bold text-slate-700">${(p * q).toLocaleString()}đ</span>
+                        </div>`;
+                }
+            }
+        });
+
+        // 6. GIẢM GIÁ HỘI VIÊN (KIM CƯƠNG, VÀNG, BẠC, ĐỒNG)
+        let discountPercent = 0;
+        let rankName = "Khách vãng lai";
+        if (court.Member_ID && window.dataCache.members) {
+            const member = window.dataCache.members[court.Member_ID];
+            if (member) {
+                rankName = member.Hang_HV || "Đồng";
+                const rankKey = rankName === "Kim cương" ? "mDiamond" : (rankName === "Vàng" ? "mGold" : (rankName === "Bạc" ? "mSilver" : "mCopper"));
+                discountPercent = parseInt(conf[rankKey] || 0);
+            }
+        }
+
+        // 7. TỔNG HỢP TIỀN
+        const deposit = Number(court.Da_Coc || 0);
+        const subTotal = timeMoney + sMoney; 
+        const discountMoney = Math.round((subTotal * discountPercent) / 100);
+        const finalTotal = Math.max(0, subTotal - discountMoney - deposit);
+
+        // 8. LƯU DỮ LIỆU VÀO CÁC Ô ẨN (Quan trọng để confirmPayment sử dụng đúng billCode)
+        const totalInput = document.getElementById('temp-bill-total-mobile');
+        if (totalInput) totalInput.value = finalTotal;
+
+        const codeInput = document.getElementById('display-bill-code-mobile');
+        if (codeInput) codeInput.value = billCode; // <--- Gán mã đơn vào đây
+
+        window.selectedCourtIdMobile = id;
+
+        // 9. HIỂN THỊ GIAO DIỆN HÓA ĐƠN MOBILE
+        const billBody = document.getElementById('checkout-body-mobile');
+        if (billBody) {
+            billBody.innerHTML = `
+                <div class="space-y-4">
+                    <div class="flex justify-between items-end px-1">
+                        <div>
+                            <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Mã đơn hàng</p>
+                            <p class="text-sm font-black text-slate-800">#${billCode}</p>
+                        </div>
+                        <div class="text-right">
+                            <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Khách hàng</p>
+                            <p class="text-sm font-black text-blue-600">${court.Ten_Khach || 'Khách lẻ'}</p>
+                        </div>
+                    </div>
+
+                    <div class="p-4 bg-blue-50 rounded-3xl border border-blue-100">
+                        <div class="flex justify-between items-center mb-2">
+                            <span class="text-[10px] font-black text-blue-400 uppercase">Tiền giờ (${(roundedMinutes / 60).toFixed(1)}h)</span>
+                            <span class="text-sm font-black text-blue-700">${timeMoney.toLocaleString()}đ</span>
+                        </div>
+                        <div class="flex justify-between text-[10px] font-bold text-blue-600 italic">
+                            <span>Vào: ${court.Gio_Vao} - Ra: ${endTime}</span>
+                            <span>${timeCalc.detail}</span>
+                        </div>
+                    </div>
+
+                    <div class="px-1">
+                        <p class="text-[10px] font-black text-slate-400 uppercase mb-1">Dịch vụ & Sản phẩm</p>
+                        <div class="space-y-1">
+                            ${sLines || '<p class="text-[10px] text-slate-300 italic text-center py-2">Không dùng dịch vụ</p>'}
+                        </div>
+                    </div>
+
+                    <div class="space-y-2">
+                        ${discountPercent > 0 ? `
+                        <div class="flex justify-between text-emerald-600 font-bold italic text-[11px] bg-emerald-50 p-3 rounded-2xl border border-emerald-100">
+                            <span>Giảm giá hạng ${rankName} (${discountPercent}%):</span>
+                            <span>-${discountMoney.toLocaleString()}đ</span>
+                        </div>` : ''}
+
+                        ${deposit > 0 ? `
+                        <div class="flex justify-between text-orange-600 font-bold text-[11px] bg-orange-50 p-3 rounded-2xl border border-orange-100">
+                            <span>Đã khấu trừ tiền cọc:</span>
+                            <span>-${deposit.toLocaleString()}đ</span>
+                        </div>` : ''}
+                    </div>
+
+                    <div class="mt-4 p-5 bg-slate-900 rounded-[2rem] flex justify-between items-center shadow-xl relative overflow-hidden">
+                        <div class="relative z-10">
+                            <p class="text-[9px] font-black text-slate-500 uppercase tracking-widest">Số tiền phải thu</p>
+                            <p class="text-3xl font-[900] text-emerald-400 tracking-tighter">${finalTotal.toLocaleString()}đ</p>
+                        </div>
+                        <i class="fa-solid fa-receipt absolute right-[-10px] bottom-[-10px] text-white/5 text-6xl rotate-12"></i>
+                    </div>
+                </div>`;
+        }
+
+        // 10. MỞ MODAL MOBILE
+        document.getElementById('modal-court-detail-mobile').classList.add('hidden');
+        const modal = document.getElementById('modal-checkout-mobile');
+        if (modal) modal.classList.remove('hidden');
+        
+        document.getElementById('payment-method-mobile').value = "Tiền mặt";
+        document.getElementById('checkout-wallet-view-mobile')?.classList.add('hidden');
+
+        setTimeout(() => {
+            document.getElementById('checkout-sheet-mobile')?.classList.remove('translate-y-full');
+        }, 10);
+
+    } catch (err) { 
+        console.error("Lỗi openCheckoutMobile:", err);
+        alert("Lỗi: " + err.message); 
+    }
+},
+// Thêm vào sau hàm openCheckout
+closeCheckout: () => {
+    const modal = document.getElementById('modal-checkout-mobile');
+    const sheet = document.getElementById('checkout-sheet-mobile');
+    if (sheet) sheet.style.transform = "translateY(100%)";
+    setTimeout(() => modal?.classList.add('hidden'), 300);
+},
+
+closeCourtDetail: () => {
+    const modal = document.getElementById('modal-court-detail-mobile');
+    const sheet = document.getElementById('court-detail-sheet');
+    if (sheet) sheet.style.transform = "translateY(100%)";
+    setTimeout(() => modal?.classList.add('hidden'), 300);
+},
+
+handlePaymentMethodChange: () => {
+    const method = document.getElementById('payment-method-mobile').value;
+    const walletView = document.getElementById('checkout-wallet-view-mobile');
+    const balanceEl = document.getElementById('checkout-wallet-balance-mobile');
+    
+    if (method === "Ví hội viên") {
+        walletView.classList.remove('hidden');
+        const courtId = window.selectedCourtIdMobile;
+        const court = window.dataCache.courts[courtId];
+        const memberId = court?.Member_ID;
+        
+        if (memberId && window.dataCache.members[memberId]) {
+            const balance = window.dataCache.members[memberId].Vi_Du || 0;
+            balanceEl.innerText = Number(balance).toLocaleString() + "đ";
+            const total = Number(document.getElementById('temp-bill-total-mobile').value);
+            balanceEl.style.color = balance < total ? "#ef4444" : "#065f46";
+        } else {
+            balanceEl.innerText = "Sân chưa gắn hội viên";
+            balanceEl.style.color = "#ef4444";
+        }
+    } else {
+        walletView.classList.add('hidden');
+    }
+},
+
+confirmPayment: async () => {
+    const id = window.selectedCourtIdMobile;
+    const total = Number(document.getElementById('temp-bill-total-mobile').value);
+    const method = document.getElementById('payment-method-mobile').value;
+    
+    // 1. LẤY MÃ ĐƠN HÀNG ĐÃ TẠO TỪ OPENCHECKOUT (Đảm bảo đồng bộ SB-xxxxxx)
+    const billCode = document.getElementById('display-bill-code-mobile')?.value || ("SB-" + Date.now().toString().slice(-6));
+    
+    if (!id) return alert("Lỗi: Không xác định được sân!");
+    
+    if (confirm(`Xác nhận thu ${total.toLocaleString()}đ (${method})?`)) {
+        try {
+            const court = window.dataCache.courts[id];
+            const updates = {};
+            const now = new Date();
+            const timeStr = now.toLocaleString('vi-VN');
+            const dateStr = now.toISOString().split('T')[0];
+            const timestamp = Date.now();
+            const bKey = 'BILL-' + timestamp;
+
+            // 2. TẠO NỘI DUNG GIAO DỊCH CHI TIẾT (Để hiện đầy đủ trên bảng Hóa Đơn)
+            const gioRa = now.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
+            const noiDungGiaoDich = `Tiền giờ ${court.Ten_San || id} (${court.Gio_Vao} - ${gioRa})`;
+
+            // 3. CẬP NHẬT TỔNG CHI TIÊU & THĂNG HẠNG (Nếu là hội viên)
+            if (court.Member_ID && window.dataCache.members[court.Member_ID]) {
+                const member = window.dataCache.members[court.Member_ID];
+                const newTotalSpend = (Number(member.Tong_Chi_Tieu) || 0) + total;
+                updates[`members/${court.Member_ID}/Tong_Chi_Tieu`] = newTotalSpend;
+
+                // Logic thăng hạng đồng bộ với hệ thống (Kim cương, Vàng, Bạc)
+                const conf = window.dataCache.config || {};
+                let newRank = member.Hang_HV || "Đồng";
+                if (newTotalSpend >= (conf.rankDiamond || 20000000)) newRank = "Kim cương";
+                else if (newTotalSpend >= (conf.rankGold || 10000000)) newRank = "Vàng";
+                else if (newTotalSpend >= (conf.rankSilver || 5000000)) newRank = "Bạc";
+                updates[`members/${court.Member_ID}/Hang_HV`] = newRank;
+            }
+
+            // 4. LƯU HÓA ĐƠN
+            updates[`bills/${bKey}`] = {
+                Id: bKey,
+                Ma_Don: billCode,
+                Khach_Hang: court.Ten_Khach || "Khách lẻ",
+                Member_ID: court.Member_ID || null,
+                Tong_Tien: total,
+                PTTT: method,
+                Noi_Dung: noiDungGiaoDich,
+                Thoi_Gian: timeStr,
+                Ngay_Thang: dateStr,
+                Loai_HD: "Tiền sân",
+                // Lưu thêm chi tiết dịch vụ nếu cần đối soát sâu
+                Items: court.Playing?.Services ? Object.values(court.Playing.Services) : []
+            };
+
+            // 5. GHI SỔ QUỸ (LEDGER)
+            const lKey = 'LG-' + timestamp;
+            updates[`ledger/${lKey}`] = {
+                Id: lKey,
+                Loai: 'Thu',
+                Doi_Tuong: court.Ten_Khach || "Khách lẻ",
+                So_Tien: total,
+                PTTT: method === "Ví hội viên" ? "Chuyển khoản" : method, 
+                Noi_Dung: `Thu tiền sân (${billCode}) - ${court.Ten_San || id}`,
+                Ngay: dateStr,
+                Thoi_Gian: timeStr,
+                Bill_Id: bKey,
+                Ma_Don: billCode
+            };
+
+            // 6. TRỪ TIỀN VÍ (NẾU SỬ DỤNG VÍ HỘI VIÊN)
+            if (method === "Ví hội viên" && court.Member_ID) {
+                const member = window.dataCache.members[court.Member_ID];
+                const currentBalance = Number(member?.Vi_Du || 0);
+                if (currentBalance < total) return alert("❌ Số dư ví hội viên không đủ!");
+                updates[`members/${court.Member_ID}/Vi_Du`] = currentBalance - total;
+            }
+
+            // 7. RESET TRẠNG THÁI SÂN
+            updates[`courts/${id}/Trang_Thai`] = "Sẵn sàng";
+            updates[`courts/${id}/Gio_Vao`] = "";
+            updates[`courts/${id}/Ten_Khach`] = "";
+            updates[`courts/${id}/Member_ID`] = null;
+            updates[`courts/${id}/Da_Coc`] = 0;
+            updates[`courts/${id}/Gio_Vao_Lich`] = "";
+            updates[`courts/${id}/Playing`] = null; // Xóa dữ liệu chơi tạm thời
+
+            await window.update(window.ref(window.db), updates);
+            
+            alert(`✅ Thanh toán thành công!\nMã đơn: ${billCode}`);
+            appMobile.closeCheckout();
+            
+        } catch (e) {
+            console.error("Lỗi confirmPayment:", e);
+            alert("Lỗi hệ thống: " + e.message);
+        }
+    }
+},
+// 1. Mở modal chọn món
+openAddService: () => {
+    const container = document.getElementById('service-list-mobile');
+    // ĐỔI TỪ products SANG services ĐỂ KHỚP VỚI DESKTOP
+    const servicesData = window.dataCache.services || {}; 
+    window.tempSelectedServices = {}; 
+
+    let html = '';
+    Object.entries(servicesData).forEach(([id, s]) => {
+        // KHỚP ĐÚNG TÊN TRƯỜNG TRONG APP-LOGIC.JS
+        const name = s.Ten_Dich_Vu || "Không tên";
+        const price = s.Gia_Ban || 0;
+
+        html += `
+            <div class="bg-slate-50 p-4 rounded-3xl border border-slate-100 flex justify-between items-center mb-2">
+                <div class="flex-1">
+                    <p class="font-black text-slate-800 text-sm uppercase">${name}</p>
+                    <p class="text-[10px] font-bold text-blue-600">${Number(price).toLocaleString()}đ</p>
+                </div>
+                <div class="flex items-center gap-4 bg-white px-3 py-2 rounded-2xl border border-slate-200">
+                    <button onclick="appMobile.changeQty('${id}', -1)" class="w-6 h-6 text-slate-400 active:scale-75 transition-all"><i class="fa-solid fa-minus text-xs"></i></button>
+                    <span id="qty-${id}" class="font-black text-slate-800 w-4 text-center">0</span>
+                    <button onclick="appMobile.changeQty('${id}', 1)" class="w-6 h-6 text-blue-600 active:scale-75 transition-all"><i class="fa-solid fa-plus text-xs"></i></button>
+                </div>
+            </div>`;
+    });
+
+    container.innerHTML = html || '<div class="py-20 text-center opacity-20 font-black uppercase text-[10px]">Chưa có dịch vụ trong kho</div>';
+    
+    document.getElementById('modal-add-service-mobile').classList.remove('hidden');
+    setTimeout(() => document.getElementById('service-sheet-mobile').style.transform = "translateY(0)", 10);
+},
+// 2. Tăng giảm số lượng tạm thời
+changeQty: (id, delta) => {
+    if (!window.tempSelectedServices[id]) window.tempSelectedServices[id] = 0;
+    window.tempSelectedServices[id] = Math.max(0, window.tempSelectedServices[id] + delta);
+    document.getElementById(`qty-${id}`).innerText = window.tempSelectedServices[id];
+},
+
+// 3. Lưu dịch vụ vào Firebase
+saveServices: async () => {
+    const courtId = window.selectedCourtIdMobile;
+    const selected = window.tempSelectedServices;
+    const servicesMaster = window.dataCache.services; // Đổi nguồn tại đây
+    
+    if (!courtId) return;
+
+    try {
+        const court = window.dataCache.courts[courtId];
+        let currentServices = court.Playing?.Services || court.Dich_Vu || {};
+        
+        Object.entries(selected).forEach(([sid, qty]) => {
+            if (qty > 0) {
+                const s = servicesMaster[sid];
+                const name = s.Ten_Dich_Vu || "Dịch vụ";
+                const price = Number(s.Gia_Ban || 0);
+
+                if (currentServices[sid]) {
+                    // Cộng dồn số lượng nếu đã có món
+                    currentServices[sid].Qty = (Number(currentServices[sid].Qty || currentServices[sid].So_Luong || 0)) + qty;
+                    currentServices[sid].So_Luong = currentServices[sid].Qty;
+                } else {
+                    currentServices[sid] = {
+                        Id: sid,
+                        Name: name,
+                        Ten_Mon: name,
+                        Price: price,
+                        Gia: price,
+                        Qty: qty,
+                        So_Luong: qty
+                    };
+                }
+            }
+        });
+
+        const updates = {};
+        // Cập nhật cả 2 nhánh để đồng bộ logic cũ và mới
+        updates[`courts/${courtId}/Playing/Services`] = currentServices;
+        updates[`courts/${courtId}/Dich_Vu`] = currentServices;
+
+        await window.update(window.ref(window.db), updates);
+        alert("✅ Đã thêm dịch vụ thành công!");
+        appMobile.closeServiceModal();
+    } catch (e) {
+        alert("Lỗi: " + e.message);
+    }
+},
+
+closeServiceModal: () => {
+    const modal = document.getElementById('modal-add-service-mobile');
+    const sheet = document.getElementById('service-sheet-mobile');
+    sheet.style.transform = "translateY(100%)";
+    setTimeout(() => modal.classList.add('hidden'), 300);
 },
 };
 
